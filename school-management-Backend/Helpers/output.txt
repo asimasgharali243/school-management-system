@@ -1,0 +1,241 @@
+
+================================================================================
+File: CronExpressionHelper.cs
+Size: 5.58 kB
+================================================================================
+
+namespace school_management_Backend.Helpers
+{
+    public static class CronExpressionHelper
+    {
+        public static bool IsValidCronExpression(string expression)
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                return false;
+
+            try
+            {
+                // Simple validation - you might want to use a proper cron parser library
+                var parts = expression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                
+                // Standard cron has 5 parts, Quartz cron has 6 or 7 parts
+                if (parts.Length < 5 || parts.Length > 7)
+                    return false;
+
+                // Check each part
+                foreach (var part in parts)
+                {
+                    if (!IsValidCronPart(part))
+                        return false;
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsValidCronPart(string part)
+        {
+            if (string.IsNullOrEmpty(part) || part == "*")
+                return true;
+
+            // Check for valid characters and patterns
+            // This is a simplified validation
+            var validChars = new[] { '*', ',', '-', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '?', 'L', 'W', '#' };
+            
+            foreach (char c in part)
+            {
+                if (!validChars.Contains(c))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public static string GetHumanReadableDescription(string cronExpression)
+        {
+            try
+            {
+                var parts = cronExpression.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                
+                if (parts.Length < 5)
+                    return "Invalid cron expression";
+
+                var description = new List<string>();
+
+                // Minute
+                if (parts[0] == "*")
+                    description.Add("every minute");
+                else if (parts[0].Contains('/'))
+                    description.Add($"every {parts[0].Split('/')[1]} minutes");
+                else
+                    description.Add($"at minute {parts[0]}");
+
+                // Hour
+                if (parts[1] == "*")
+                    description.Add("of every hour");
+                else if (parts[1].Contains('/'))
+                    description.Add($"every {parts[1].Split('/')[1]} hours");
+                else
+                    description.Add($"at hour {parts[1]}");
+
+                // Day of month
+                if (parts[2] == "*")
+                    description.Add("every day");
+                else if (parts[2] == "?")
+                    description.Add("(day not specified)");
+                else
+                    description.Add($"on day {parts[2]} of the month");
+
+                // Month
+                if (parts[3] == "*")
+                    description.Add("every month");
+                else
+                    description.Add($"in {GetMonthName(parts[3])}");
+
+                // Day of week
+                if (parts[4] == "*" || parts[4] == "?")
+                    description.Add("");
+                else
+                    description.Add($"on {GetDayOfWeekName(parts[4])}");
+
+                return string.Join(" ", description).Trim();
+            }
+            catch
+            {
+                return cronExpression;
+            }
+        }
+
+        private static string GetMonthName(string month)
+        {
+            if (int.TryParse(month, out int monthNum) && monthNum >= 1 && monthNum <= 12)
+            {
+                var monthNames = new[] { "January", "February", "March", "April", "May", "June", 
+                    "July", "August", "September", "October", "November", "December" };
+                return monthNames[monthNum - 1];
+            }
+            return month;
+        }
+
+        private static string GetDayOfWeekName(string day)
+        {
+            if (int.TryParse(day, out int dayNum) && dayNum >= 0 && dayNum <= 6)
+            {
+                var dayNames = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+                return dayNames[dayNum];
+            }
+            else if (day == "*" || day == "?")
+            {
+                return "every day";
+            }
+            return day;
+        }
+
+        public static string[] GetCommonCronExpressions()
+        {
+            return new[]
+            {
+                "0 * * * *",      // Every hour
+                "0 0 * * *",      // Daily at midnight
+                "0 9 * * *",      // Daily at 9 AM
+                "0 9 * * 1-5",    // Weekdays at 9 AM
+                "0 9 * * 0",      // Sundays at 9 AM
+                "0 0 1 * *",      // First day of month at midnight
+                "0 0 * * 0",      // Weekly on Sunday at midnight
+                "0 0 1 1 *",      // Yearly on Jan 1 at midnight
+                "*/5 * * * *",    // Every 5 minutes
+                "*/15 * * * *",   // Every 15 minutes
+                "*/30 * * * *",   // Every 30 minutes
+                "0 */6 * * *",    // Every 6 hours
+                "0 0 */7 * *",    // Every 7 days
+                "0 0 1,15 * *",   // 1st and 15th of month
+                "0 12 * * 1-5"    // Weekdays at noon
+            };
+        }
+    }
+}
+
+================================================================================
+File: TemplateParser.cs
+Size: 2.42 kB
+================================================================================
+
+using Newtonsoft.Json;
+
+namespace school_management_Backend.Helpers
+{
+    public static class TemplateParser
+    {
+        public static string ParseTemplate(string template, Dictionary<string, object> data)
+        {
+            if (string.IsNullOrEmpty(template))
+                return string.Empty;
+
+            var result = template;
+
+            foreach (var item in data)
+            {
+                var placeholder = "{" + item.Key + "}";
+                var value = item.Value?.ToString() ?? string.Empty;
+                result = result.Replace(placeholder, value);
+            }
+
+            return result;
+        }
+
+        public static string ParseJsonTemplate(string jsonTemplate, Dictionary<string, object> data)
+        {
+            if (string.IsNullOrEmpty(jsonTemplate))
+                return null;
+
+            try
+            {
+                var templateObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonTemplate);
+                if (templateObj == null)
+                    return null;
+
+                foreach (var key in templateObj.Keys.ToList())
+                {
+                    if (templateObj[key] is string stringValue)
+                    {
+                        templateObj[key] = ParseTemplate(stringValue, data);
+                    }
+                }
+
+                return JsonConvert.SerializeObject(templateObj);
+            }
+            catch
+            {
+                return jsonTemplate;
+            }
+        }
+
+        public static Dictionary<string, string> ExtractPlaceholders(string template)
+        {
+            var placeholders = new Dictionary<string, string>();
+            
+            if (string.IsNullOrEmpty(template))
+                return placeholders;
+
+            var matches = System.Text.RegularExpressions.Regex.Matches(template, @"\{(\w+)\}");
+            
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                if (match.Groups.Count > 1)
+                {
+                    var placeholder = match.Groups[1].Value;
+                    if (!placeholders.ContainsKey(placeholder))
+                    {
+                        placeholders[placeholder] = $"{{{placeholder}}}";
+                    }
+                }
+            }
+
+            return placeholders;
+        }
+    }
+}

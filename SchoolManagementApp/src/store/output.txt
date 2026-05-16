@@ -1,0 +1,1489 @@
+
+================================================================================
+File: apiSlice.js
+Size: 2.08 kB
+================================================================================
+
+// src/store/apiSlice.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL, API_TIMEOUT } from '../config/constants';
+import { logout } from './slices/authSlice';
+
+// Base query with authentication
+const baseQuery = fetchBaseQuery({
+    baseUrl: BASE_URL,
+    prepareHeaders: async (headers) => {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+        headers.set('Content-Type', 'application/json');
+        headers.set('Accept', 'application/json');
+        return headers;
+    },
+    timeout: API_TIMEOUT,
+});
+
+// Custom base query with error handling
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+    let result = await baseQuery(args, api, extraOptions);
+
+    if (result.error) {
+        console.log('API Error:', result.error);
+
+        // Handle 401 Unauthorized
+        if (result.error.status === 401) {
+            // Clear stored tokens
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+
+            // Dispatch logout action
+            api.dispatch(logout());
+
+            // You can redirect to login screen here if needed
+        }
+
+        // Handle network errors
+        if (result.error.status === 'FETCH_ERROR') {
+            return {
+                error: {
+                    status: 'NETWORK_ERROR',
+                    data: { message: 'Network connection failed. Please check your internet connection.' }
+                }
+            };
+        }
+    }
+
+    return result;
+};
+
+export const apiSlice = createApi({
+    reducerPath: 'api',
+    baseQuery: baseQueryWithReauth,
+    tagTypes: [
+        'User',
+        'Student',
+        'Teacher',
+        'Class',
+        'Section',
+        'Attendance',
+        'Fee',
+        'Notification',
+        'Campus'
+    ],
+    endpoints: () => ({}),
+});
+
+================================================================================
+File: attendanceApi.js
+Size: 6.58 kB
+================================================================================
+
+
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { BASE_URL } from '../config/constants';
+
+export const attendanceApi = createApi({
+    reducerPath: 'attendanceApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: BASE_URL,
+        // In both API files, update the prepareHeaders function:
+        prepareHeaders: (headers, { getState }) => {
+            const state = getState();
+            const token = state.auth?.token;
+
+            console.log('🔐 API Headers - Token Check:', {
+                hasToken: !!token,
+                tokenLength: token?.length,
+                tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token',
+                timestamp: new Date().toISOString()
+            });
+
+            if (token) {
+                console.log('🔐 Setting Authorization header');
+                headers.set('Authorization', `Bearer ${token}`);
+            } else {
+                console.warn('⚠️ No token found in Redux state for API call');
+                // You might want to dispatch a token refresh here
+            }
+
+            headers.set('Accept', 'application/json');
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        }
+    }),
+    tagTypes: ['Attendance', 'AttendanceStats', 'Diary'],
+    endpoints: (builder) => ({
+        // Get child's attendance statistics
+        getChildAttendanceStats: builder.query({
+            query: ({ childId, filters = {} }) => {
+                const params = new URLSearchParams();
+                if (filters.month !== undefined && filters.month !== null) {
+                    params.append('month', filters.month);
+                }
+                if (filters.year !== undefined && filters.year !== null) {
+                    params.append('year', filters.year);
+                }
+                if (filters.dateFrom) {
+                    params.append('dateFrom', filters.dateFrom);
+                }
+                if (filters.dateTo) {
+                    params.append('dateTo', filters.dateTo);
+                }
+
+                return `/api/attendance/child/${childId}/stats?${params.toString()}`;
+            },
+            transformResponse: (response) => {
+                console.log('📊 Attendance Stats Response:', response);
+
+                // The backend returns ApiResponse<T> format
+                if (response && typeof response === 'object') {
+                    if (response.success !== undefined) {
+                        return {
+                            success: response.success,
+                            data: response.data || {},
+                            error: response.error
+                        };
+                    }
+                }
+
+                return {
+                    success: false,
+                    data: {},
+                    error: 'Invalid response format'
+                };
+            },
+            providesTags: ['AttendanceStats'],
+        }),
+
+        // Get child's attendance history
+        getChildAttendanceHistory: builder.query({
+            query: ({ childId, filters = {} }) => {
+                const params = new URLSearchParams();
+                if (filters.month !== undefined && filters.month !== null) {
+                    params.append('month', filters.month);
+                }
+                if (filters.year !== undefined && filters.year !== null) {
+                    params.append('year', filters.year);
+                }
+                if (filters.status && filters.status !== 'all') {
+                    params.append('status', filters.status);
+                }
+                if (filters.dateFrom) {
+                    params.append('dateFrom', filters.dateFrom);
+                }
+                if (filters.dateTo) {
+                    params.append('dateTo', filters.dateTo);
+                }
+
+                return `/api/attendance/child/${childId}/history?${params.toString()}`;
+            },
+            transformResponse: (response) => {
+                console.log('📅 Attendance History Response:', response);
+
+                if (response && typeof response === 'object') {
+                    if (response.success !== undefined) {
+                        return {
+                            success: response.success,
+                            data: response.data || {},
+                            error: response.error
+                        };
+                    }
+                }
+
+                return {
+                    success: false,
+                    data: {},
+                    error: 'Invalid response format'
+                };
+            },
+            providesTags: ['Attendance'],
+        }),
+
+        // Get child's diary entries
+        getChildDiary: builder.query({
+            query: ({ childId, filters = {} }) => {
+                const params = new URLSearchParams();
+                if (filters.date) {
+                    params.append('date', filters.date);
+                }
+                if (filters.month !== undefined && filters.month !== null) {
+                    params.append('month', filters.month);
+                }
+                if (filters.year !== undefined && filters.year !== null) {
+                    params.append('year', filters.year);
+                }
+                if (filters.subjectId) {
+                    params.append('subjectId', filters.subjectId);
+                }
+
+                return `/api/diary/child/${childId}?${params.toString()}`;
+            },
+            transformResponse: (response) => {
+                console.log('📓 Diary Response:', response);
+
+                if (response && typeof response === 'object') {
+                    if (response.success !== undefined) {
+                        return {
+                            success: response.success,
+                            data: response.data || {},
+                            error: response.error
+                        };
+                    }
+                }
+
+                return {
+                    success: false,
+                    data: {},
+                    error: 'Invalid response format'
+                };
+            },
+            providesTags: ['Diary'],
+        }),
+    }),
+});
+
+export const {
+    useGetChildAttendanceStatsQuery,
+    useGetChildAttendanceHistoryQuery,
+    useGetChildDiaryQuery,
+} = attendanceApi;
+
+================================================================================
+File: gradesApi.js
+Size: 6.85 kB
+================================================================================
+
+
+
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { BASE_URL } from '../config/constants';
+
+export const gradesApi = createApi({
+    reducerPath: 'gradesApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: BASE_URL,
+        prepareHeaders: (headers, { getState }) => {
+            const state = getState();
+            const token = state.auth?.token;
+
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            headers.set('Accept', 'application/json');
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        }
+    }),
+    tagTypes: ['Grades', 'ResultStats', 'Teacher', 'Subject'],
+    endpoints: (builder) => ({
+        // Get child's grades
+        getChildGrades: builder.query({
+            query: ({ childId, filters = {} }) => {
+                const params = new URLSearchParams();
+
+                // Add filters if they exist
+                if (filters.subjectId) params.append('subjectId', filters.subjectId);
+                if (filters.batchId) params.append('batchId', filters.batchId);
+                if (filters.yearId) params.append('yearId', filters.yearId);
+                if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+                if (filters.dateTo) params.append('dateTo', filters.dateTo);
+                if (filters.month) params.append('month', filters.month);
+                if (filters.year) params.append('year', filters.year);
+
+                const url = `/api/grades/child/${childId}${params.toString() ? `?${params.toString()}` : ''}`;
+                console.log('Fetching grades from:', url);
+                return url;
+            },
+            transformResponse: (response) => {
+                // Handle both wrapped and unwrapped responses
+                if (response?.success !== undefined) {
+                    return response.data || [];
+                }
+                return response || [];
+            },
+            providesTags: (result, error, { childId }) =>
+                result ? [{ type: 'Grades', id: childId }] : ['Grades'],
+        }),
+
+        // Get child's grade statistics
+        getChildGradeStats: builder.query({
+            query: ({ childId, filters = {} }) => {
+                const params = new URLSearchParams();
+
+                if (filters.subjectId) params.append('subjectId', filters.subjectId);
+                if (filters.yearId) params.append('yearId', filters.yearId);
+                if (filters.month) params.append('month', filters.month);
+                if (filters.year) params.append('year', filters.year);
+
+                const url = `/api/grades/child/${childId}/stats${params.toString() ? `?${params.toString()}` : ''}`;
+                return url;
+            },
+            transformResponse: (response) => {
+                if (response?.success !== undefined) {
+                    return response.data || {};
+                }
+                return response || {};
+            },
+            providesTags: (result, error, { childId }) =>
+                result ? [{ type: 'ResultStats', id: childId }] : ['ResultStats'],
+        }),
+
+        // Get subjects with grades
+        getChildSubjectsWithGrades: builder.query({
+            query: (childId) => `/api/grades/child/${childId}/subjects`,
+            transformResponse: (response) => {
+                if (response?.success !== undefined) {
+                    return response.data || [];
+                }
+                return response || [];
+            },
+            providesTags: ['Subject'],
+        }),
+
+        // Get exam batches
+        getExamBatches: builder.query({
+            query: ({ classId, sectionId }) => {
+                const params = new URLSearchParams();
+                if (classId) params.append('classId', classId);
+                if (sectionId) params.append('sectionId', sectionId);
+
+                const url = `/api/grades/exam-batches${params.toString() ? `?${params.toString()}` : ''}`;
+                return url;
+            },
+            transformResponse: (response) => {
+                if (response?.success !== undefined) {
+                    return response.data || [];
+                }
+                return response || [];
+            },
+        }),
+
+        // Get academic years
+        getAcademicYears: builder.query({
+            query: () => '/api/grades/academic-years',
+            transformResponse: (response) => {
+                if (response?.success !== undefined) {
+                    return response.data || [];
+                }
+                return response || [];
+            },
+        }),
+
+        // Get grade trends
+        getGradeTrends: builder.query({
+            query: ({ childId, subjectId }) =>
+                `/api/grades/child/${childId}/trends${subjectId ? `?subjectId=${subjectId}` : ''}`,
+            transformResponse: (response) => {
+                if (response?.success !== undefined) {
+                    return response.data || [];
+                }
+                return response || [];
+            },
+            providesTags: ['Grades'],
+        }),
+
+        // Download grade report
+        downloadGradeReport: builder.mutation({
+            query: ({ childId, filters = {} }) => ({
+                url: `/api/grades/child/${childId}/report`,
+                method: 'GET',
+                params: filters,
+                responseHandler: async (response) => {
+                    const contentType = response.headers.get('content-type');
+
+                    if (contentType?.includes('application/json')) {
+                        const data = await response.json();
+                        return data;
+                    }
+
+                    // Handle PDF download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `grade-report-${childId}.pdf`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    return { success: true, message: 'Report downloaded successfully' };
+                },
+            }),
+        }),
+    }),
+});
+
+export const {
+    useGetChildGradesQuery,
+    useGetChildGradeStatsQuery,
+    useGetChildSubjectsWithGradesQuery,
+    useGetExamBatchesQuery,
+    useGetAcademicYearsQuery,
+    useGetGradeTrendsQuery,
+    useDownloadGradeReportMutation,
+} = gradesApi;
+
+================================================================================
+File: hooks.js
+Size: 153 B
+================================================================================
+
+import { useDispatch, useSelector } from 'react-redux';
+
+export const useAppDispatch = () => useDispatch();
+export const useAppSelector = useSelector;
+
+================================================================================
+File: index.js
+Size: 3.66 kB
+================================================================================
+
+
+
+import { configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
+import { persistStore, persistReducer } from 'redux-persist';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { combineReducers } from 'redux';
+
+// Import all slices
+import authReducer from './slices/authSlice';
+import themeReducer from './slices/themeSlice';
+import teacherReducer from './slices/teacherSlice';
+import { gradesApi } from './gradesApi';
+import { attendanceApi } from './attendanceApi';
+// Create simple reducers for missing ones
+const userReducer = (state = {}, action) => {
+    switch (action.type) {
+        default:
+            return state;
+    }
+};
+
+const rootReducer = combineReducers({
+    auth: authReducer,
+    theme: themeReducer,
+    user: userReducer,
+    teacher: teacherReducer,
+    [gradesApi.reducerPath]: gradesApi.reducer,
+    [attendanceApi.reducerPath]: attendanceApi.reducer,
+});
+
+const persistConfig = {
+    key: 'root',
+    storage: AsyncStorage,
+    whitelist: ['auth', 'theme'],
+    version: 1,
+    migrate: (state) => {
+        if (!state) {
+            return Promise.resolve({
+                _persist: { version: 1, rehydrated: false }
+            });
+        }
+
+        // Migration: Ensure theme has proper structure
+        if (state.theme && (!state.theme.themeData || !state.theme.theme)) {
+            return Promise.resolve({
+                ...state,
+                theme: {
+                    theme: 'light',
+                    themeData: {
+                        primary: '#2196F3',
+                        secondary: '#FF9800',
+                        background: '#FFFFFF',
+                        surface: '#F5F5F5',
+                        text: '#212121',
+                        textSecondary: '#757575',
+                        error: '#F44336',
+                        success: '#4CAF50',
+                        warning: '#FF9800',
+                        border: '#E0E0E0',
+                        card: '#FFFFFF',
+                    },
+                    isDarkMode: false,
+                },
+                _persist: { ...state._persist, version: 1 }
+            });
+        }
+
+        // Migration: Ensure teacher slice exists
+        if (!state.teacher) {
+            return Promise.resolve({
+                ...state,
+                teacher: {
+                    classes: [],
+                    currentClass: null,
+                    students: [],
+                    attendance: [],
+                    todayAttendance: null,
+                    attendanceHistory: [],
+                    loading: false,
+                    error: null,
+                    success: false,
+                    attendanceLoading: false,
+                    studentsLoading: false,
+                },
+                _persist: { ...state._persist, version: 1 }
+            });
+        }
+
+        return Promise.resolve(state);
+    },
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+            serializableCheck: {
+                ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+            },
+        }).concat(gradesApi.middleware, attendanceApi.middleware), // Add RTK Query middleware here
+});
+
+export const persistor = persistStore(store);
+
+// Optional: Clear persisted state if needed during development
+// persistor.purge();
+
+setupListeners(store.dispatch);
+
+================================================================================
+File: slices\authSlice.js
+Size: 20.86 kB
+================================================================================
+
+
+
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../config/constants';
+
+// Try to import notification service with fallback
+let firebaseNotifications = null;
+try {
+    import('../../services/notificationService').then(module => {
+        firebaseNotifications = module.default || module.firebaseNotifications;
+        console.log('✅ Notification service imported successfully');
+    }).catch(error => {
+        console.warn('⚠️ Could not import notification service:', error.message);
+    });
+} catch (error) {
+    console.warn('⚠️ Notification service import failed:', error.message);
+}
+
+export const loginUser = createAsyncThunk(
+    'auth/login',
+    async ({ username, password }, { rejectWithValue, dispatch }) => {
+        try {
+            console.log('🔐 Login attempt for:', username);
+
+            const response = await fetch(`${BASE_URL}/api/Auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username.trim(),
+                    password: password,
+                }),
+            });
+
+            console.log('📤 Response status:', response.status);
+
+            const data = await response.json();
+            console.log('📥 Response data received:', {
+                hasToken: !!data.token,
+                tokenLength: data.token?.length,
+                hasUser: !!data.user,
+                userRole: data.user?.role,
+                childrenCount: data.children?.length || 0
+            });
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            // Store tokens and user data
+            console.log('💾 Storing tokens and user data...');
+            await AsyncStorage.multiSet([
+                ['token', data.token],
+                ['user', JSON.stringify(data.user)],
+                ['children', JSON.stringify(data.children || [])],
+                ['user_id', String(data.user?.id || '')],
+            ]);
+
+            // Dispatch the credentials to update Redux state immediately
+            dispatch(setCredentials({
+                user: data.user,
+                token: data.token,
+                children: data.children || []
+            }));
+
+            // Initialize notifications for the user with safety check
+            if (data.user) {
+                console.log('🔔 Attempting to register user for notifications...');
+                setTimeout(async () => {
+                    try {
+                        if (firebaseNotifications && typeof firebaseNotifications.registerUser === 'function') {
+                            const success = await firebaseNotifications.registerUser(data.user);
+                            if (success) {
+                                console.log('✅ User registered for notifications');
+                            } else {
+                                console.log('⚠️ User registration returned false');
+                            }
+                        } else {
+                            console.log('⚠️ Notification service not available yet');
+                            await AsyncStorage.setItem('pending_notification_user', JSON.stringify(data.user));
+                        }
+                    } catch (notifError) {
+                        console.error('❌ Failed to register for notifications:', notifError);
+                    }
+                }, 1000);
+            }
+
+            return data;
+        } catch (error) {
+            console.error('❌ Login error:', error);
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+// export const validateToken = createAsyncThunk(
+//     'auth/validate',
+//     async (_, { rejectWithValue, getState }) => {
+//         try {
+//             console.log('🔐 Starting token validation...');
+
+//             // Get token from Redux state first
+//             let token = getState().auth.token;
+//             if (!token) {
+//                 console.log('🔐 Token not in Redux state, checking AsyncStorage...');
+//                 token = await AsyncStorage.getItem('token');
+//             }
+
+//             if (!token) {
+//                 console.error('❌ No token found for validation');
+//                 throw new Error('No token found');
+//             }
+
+//             console.log('🔐 Token found, length:', token.length);
+
+//             const response = await fetch(`${BASE_URL}/api/Auth/validate`, {
+//                 method: 'GET',
+//                 headers: {
+//                     'Authorization': `Bearer ${token}`,
+//                     'Accept': 'application/json',
+//                     'Content-Type': 'application/json',
+//                 },
+//             });
+
+//             const data = await response.json();
+//             console.log('🔐 Validation response:', {
+//                 status: response.status,
+//                 data: data, // Log the full data to see what's coming back
+//                 hasUser: !!data.user,
+//                 childrenCount: data.children?.length || 0
+//             });
+//             if (!response.ok || !data.success) {
+//                 console.error('❌ Token validation failed');
+//                 throw new Error(data.message || 'Token validation failed');
+//             }
+
+//             // Update stored user data
+//             await AsyncStorage.multiSet([
+//                 ['user', JSON.stringify(data.user)],
+//                 ['children', JSON.stringify(data.children || [])],
+//             ]);
+
+//             return {
+//                 user: data.user,
+//                 children: data.children || [],
+//                 token: token // Return the existing token
+//             };
+//         } catch (error) {
+//             console.error('❌ Validate token error:', error);
+//             return rejectWithValue(error.message);
+//         }
+//     }
+// );
+
+export const validateToken = createAsyncThunk(
+    'auth/validate',
+    async (_, { rejectWithValue, getState }) => {
+        try {
+            console.log('🔐 Starting token validation...');
+
+            // Get token from Redux state first
+            let token = getState().auth.token;
+            if (!token) {
+                console.log('🔐 Token not in Redux state, checking AsyncStorage...');
+                token = await AsyncStorage.getItem('token');
+            }
+
+            if (!token) {
+                console.error('❌ No token found for validation');
+                throw new Error('No token found');
+            }
+
+            console.log('🔐 Token found, length:', token.length);
+
+            const response = await fetch(`${BASE_URL}/api/Auth/validate`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            console.log('🔐 Validation response:', {
+                status: response.status,
+                hasUser: !!data.user,
+                hasChildren: !!(data.children && data.children.length > 0),
+                responseData: data
+            });
+
+            // FIX: Check response.ok only, not data.success
+            if (!response.ok) {
+                console.error('❌ Token validation failed with status:', response.status);
+                throw new Error(data.message || 'Token validation failed');
+            }
+
+            // If we get here with user data, it's successful
+            if (!data.user) {
+                throw new Error('Invalid response: No user data');
+            }
+
+            // Update stored user data
+            await AsyncStorage.multiSet([
+                ['user', JSON.stringify(data.user)],
+                ['children', JSON.stringify(data.children || [])],
+            ]);
+
+            // Return the data with the EXISTING token (not from response)
+            return {
+                user: data.user,
+                children: data.children || [],
+                token: token  // Keep using the existing token
+            };
+        } catch (error) {
+            console.error('❌ Validate token error:', error);
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const initializeAuth = createAsyncThunk(
+    'auth/initialize',
+    async (_, { dispatch }) => {
+        try {
+            console.log('🔄 Initializing auth state from AsyncStorage...');
+
+            // Load ALL auth data from AsyncStorage
+            const [
+                token,
+                userStr,
+                childrenStr,
+            ] = await Promise.all([
+                AsyncStorage.getItem('token'),
+                AsyncStorage.getItem('user'),
+                AsyncStorage.getItem('children'),
+            ]);
+
+            console.log('📥 Loaded from storage:', {
+                hasToken: !!token,
+                tokenLength: token?.length,
+                tokenPreview: token ? `${token.substring(0, 30)}...` : 'No token',
+                hasUser: !!userStr,
+                hasChildren: !!childrenStr
+            });
+
+            let user = null;
+            let children = [];
+
+            try {
+                user = userStr ? JSON.parse(userStr) : null;
+                children = childrenStr ? JSON.parse(childrenStr) : [];
+            } catch (parseError) {
+                console.error('❌ Error parsing stored data:', parseError);
+            }
+
+            // Set initial state with loaded data
+            if (token && user) {
+                // CRITICAL: Set the token in Redux state
+                dispatch(setInitialState({
+                    token,
+                    user,
+                    children,
+                    isAuthenticated: true,
+                    isInitialized: true,
+                    isLoading: false,
+                }));
+
+                console.log('✅ Token loaded into Redux state:', {
+                    stateHasToken: !!token,
+                    userLoaded: !!user,
+                    childrenCount: children.length
+                });
+
+                // Then validate the token
+                try {
+                    const result = await dispatch(validateToken()).unwrap();
+                    console.log('✅ Token validated successfully');
+
+                    // Update with validated data
+                    dispatch(setCredentials({
+                        user: result.user,
+                        token: token, // Keep the same token
+                        children: result.children || []
+                    }));
+
+                    return {
+                        isAuthenticated: true,
+                        token: token
+                    };
+                } catch (validationError) {
+                    console.error('❌ Token validation failed:', validationError);
+                    // Token is invalid, clear it
+                    await AsyncStorage.multiRemove(['token']);
+                    dispatch(logout());
+                    return { isAuthenticated: false };
+                }
+            } else {
+                console.log('ℹ️ No valid token or user found in storage');
+                dispatch(setInitialState({
+                    token: null,
+                    user: null,
+                    children: [],
+                    isAuthenticated: false,
+                    isInitialized: true,
+                    isLoading: false,
+                }));
+                return { isAuthenticated: false };
+            }
+        } catch (error) {
+            console.error('❌ Auth initialization error:', error);
+            dispatch(setInitialState({
+                token: null,
+                user: null,
+                children: [],
+                isAuthenticated: false,
+                isInitialized: true,
+                isLoading: false,
+            }));
+            return { isAuthenticated: false };
+        }
+    }
+);
+
+export const logoutUser = createAsyncThunk(
+    'auth/logout',
+    async (_, { dispatch }) => {
+        try {
+            console.log('👋 Logging out user...');
+
+            // Cleanup notifications if service is available
+            if (firebaseNotifications && typeof firebaseNotifications.logoutCleanup === 'function') {
+                await firebaseNotifications.logoutCleanup();
+            }
+
+            // Clear AsyncStorage
+            await AsyncStorage.multiRemove([
+                'token',
+                'user',
+                'children',
+                'user_id',
+                'fcm_token',
+                'backend_token_registered',
+                'pending_notification_user',
+            ]);
+
+            // Dispatch logout action
+            dispatch(logout());
+
+            console.log('✅ Logout completed');
+            return true;
+        } catch (error) {
+            console.error('❌ Logout error:', error);
+            throw error;
+        }
+    }
+);
+
+const initialState = {
+    user: null,
+    token: null,
+    children: [],
+    isAuthenticated: false,
+    isLoading: false,
+    isInitialized: false,
+    error: null,
+};
+
+const authSlice = createSlice({
+    name: 'auth',
+    initialState,
+    reducers: {
+        setCredentials: (state, action) => {
+            const { user, token, children } = action.payload;
+            console.log('🔄 Setting credentials in Redux:', {
+                hasToken: !!token,
+                hasUser: !!user,
+                childrenCount: children?.length || 0
+            });
+            state.user = user;
+            state.token = token; // THIS IS CRITICAL
+            state.children = children || [];
+            state.isAuthenticated = !!token;
+            state.error = null;
+        },
+        setInitialState: (state, action) => {
+            const { token, user, children, isAuthenticated, isInitialized, isLoading } = action.payload;
+            console.log('🔄 Setting initial state in Redux:', {
+                hasToken: !!token,
+                tokenLength: token?.length,
+                hasUser: !!user
+            });
+            state.token = token; // THIS IS CRITICAL
+            state.user = user;
+            state.children = children || [];
+            state.isAuthenticated = isAuthenticated;
+            state.isInitialized = isInitialized !== undefined ? isInitialized : true;
+            state.isLoading = isLoading !== undefined ? isLoading : false;
+            state.error = null;
+        },
+        logout: (state) => {
+            console.log('🔄 Logging out from Redux state');
+            state.user = null;
+            state.token = null; // THIS IS CRITICAL
+            state.children = [];
+            state.isAuthenticated = false;
+            state.isLoading = false;
+            state.error = null;
+        },
+        clearError: (state) => {
+            state.error = null;
+        },
+        setChildren: (state, action) => {
+            state.children = action.payload;
+        },
+        updateUserProfile: (state, action) => {
+            if (state.user) {
+                state.user = { ...state.user, ...action.payload };
+                AsyncStorage.setItem('user', JSON.stringify(state.user));
+            }
+        },
+        setToken: (state, action) => {
+            console.log('🔄 Setting token in Redux:', action.payload ? 'Token set' : 'Token cleared');
+            state.token = action.payload;
+            state.isAuthenticated = !!action.payload;
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(loginUser.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(loginUser.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload.user;
+                state.token = action.payload.token; // THIS IS CRITICAL
+                state.children = action.payload.children || [];
+                state.isInitialized = true;
+                state.error = null;
+                console.log('✅ Login successful, token set in Redux');
+            })
+            .addCase(loginUser.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isAuthenticated = false;
+                state.token = null;
+                state.error = action.payload;
+                console.error('❌ Login rejected:', action.payload);
+            })
+            .addCase(validateToken.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(validateToken.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload.user;
+                // Keep the existing token - don't overwrite it
+                state.children = action.payload.children || [];
+                state.isInitialized = true;
+                state.error = null;
+                console.log('✅ Token validated, user updated');
+            })
+            .addCase(validateToken.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.token = null; // Clear token on validation failure
+                state.children = [];
+                state.isInitialized = true;
+                state.error = action.payload;
+                console.log('❌ Token validation failed, cleared token');
+            })
+            .addCase(initializeAuth.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(initializeAuth.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isInitialized = true;
+                state.isAuthenticated = action.payload.isAuthenticated;
+                console.log('✅ Auth initialized:', {
+                    isAuthenticated: state.isAuthenticated,
+                    hasToken: !!state.token
+                });
+            })
+            .addCase(initializeAuth.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isInitialized = true;
+                state.isAuthenticated = false;
+                state.token = null;
+                state.error = action.payload;
+                console.log('❌ Auth initialization failed');
+            })
+            .addCase(logoutUser.fulfilled, (state) => {
+                console.log('✅ Logout successful from async');
+            });
+    },
+});
+
+export const {
+    setCredentials,
+    setInitialState,
+    logout,
+    clearError,
+    setChildren,
+    updateUserProfile,
+    setToken
+} = authSlice.actions;
+
+// Selectors
+export const selectCurrentUser = (state) => {
+    console.log('🔍 Selecting user from state:', {
+        hasUser: !!state.auth.user,
+        username: state.auth.user?.username
+    });
+    return state.auth.user;
+};
+
+export const selectCurrentToken = (state) => {
+    console.log('🔍 Selecting token from state:', {
+        hasToken: !!state.auth.token,
+        tokenLength: state.auth.token?.length,
+        tokenPreview: state.auth.token ? `${state.auth.token.substring(0, 20)}...` : 'No token'
+    });
+    return state.auth.token;
+};
+
+export const selectChildren = (state) => state.auth.children;
+export const selectIsAuthenticated = (state) => {
+    const isAuth = state.auth.isAuthenticated && !!state.auth.token;
+    console.log('🔍 Authentication check:', {
+        isAuthenticated: state.auth.isAuthenticated,
+        hasToken: !!state.auth.token,
+        finalResult: isAuth
+    });
+    return isAuth;
+};
+export const selectIsLoading = (state) => state.auth.isLoading;
+export const selectAuthError = (state) => state.auth.error;
+export const selectIsInitialized = (state) => state.auth.isInitialized;
+export const selectUserId = (state) => state.auth.user?.id;
+
+export default authSlice.reducer;
+
+================================================================================
+File: slices\teacherSlice.js
+Size: 9.53 kB
+================================================================================
+
+
+
+// store/slices/teacherSlice.js
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { apiClient } from '../../utils/apiClient';
+
+export const fetchTeacherClasses = createAsyncThunk(
+    'teacher/fetchClasses',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.get('/Teacher/Classes');
+            console.log('Fetched classes response:', response.data);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
+
+export const fetchClassStudents = createAsyncThunk(
+    'teacher/fetchClassStudents',
+    async ({ classId, sectionId }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.get(`/Teacher/ClassStudents/${classId}/${sectionId}`);
+            console.log('Fetched class students response:', response.data);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
+
+export const fetchTodayAttendance = createAsyncThunk(
+    'teacher/fetchTodayAttendance',
+    async ({ classId, sectionId }, { rejectWithValue }) => {
+        try {
+
+            const response = await apiClient.get(`/Teacher/TodayAttendance/${classId}/${sectionId}`);
+            console.log('Fetched today attendance response:', response.data);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
+
+export const markAttendance = createAsyncThunk(
+    'teacher/markAttendance',
+    async (attendanceData, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.post('/Teacher/MarkAttendance', attendanceData);
+            console.log('Marked attendance response:', response.data);
+            return response.data;
+
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
+
+export const fetchAttendanceHistory = createAsyncThunk(
+    'teacher/fetchAttendanceHistory',
+    async ({ classId, sectionId, month, year }, { rejectWithValue }) => {
+        try {
+            const response = await apiClient.get(`/Teacher/AttendanceHistory/${classId}/${sectionId}/${month}/${year}`);
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || error.message);
+        }
+    }
+);
+
+const teacherSlice = createSlice({
+    name: 'teacher',
+    initialState: {
+        classes: [],
+        currentClass: null,
+        students: [],
+        attendance: [],
+        todayAttendance: null,
+        attendanceHistory: [],
+        loading: false,
+        error: null,
+        success: false,
+        attendanceLoading: false,
+        // ADD ONLY THESE - don't change existing structure
+        studentsLoading: false, // NEW: Separate loading state for students
+    },
+    reducers: {
+        setCurrentClass: (state, action) => {
+            state.currentClass = action.payload;
+        },
+        clearAttendanceData: (state) => {
+            state.todayAttendance = null;
+            state.attendance = [];
+        },
+        updateAttendanceStatus: (state, action) => {
+            const { studentId, status, lateStatus, remarks } = action.payload;
+            const existingIndex = state.attendance.findIndex(a => a.studentId === studentId);
+
+            if (existingIndex >= 0) {
+                state.attendance[existingIndex] = {
+                    ...state.attendance[existingIndex],
+                    status,
+                    lateStatus,
+                    remarks
+                };
+            } else {
+                state.attendance.push({
+                    studentId,
+                    status,
+                    lateStatus,
+                    remarks
+                });
+            }
+        },
+        clearError: (state) => {
+            state.error = null;
+            state.success = false;
+        },
+        // ADD THIS ONLY - new reducer
+        clearStudents: (state) => {
+            state.students = [];
+        }
+    },
+    extraReducers: (builder) => {
+        builder
+            // Fetch classes - KEEP AS IS
+            .addCase(fetchTeacherClasses.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchTeacherClasses.fulfilled, (state, action) => {
+                state.loading = false;
+                state.classes = action.payload.classes || [];
+                state.error = null;
+            })
+            .addCase(fetchTeacherClasses.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // Fetch class students - MODIFY THIS SECTION ONLY
+            .addCase(fetchClassStudents.pending, (state) => {
+                state.studentsLoading = true; // CHANGE: Use studentsLoading instead of loading
+                state.error = null;
+            })
+            .addCase(fetchClassStudents.fulfilled, (state, action) => {
+                state.studentsLoading = false; // CHANGE: Use studentsLoading instead of loading
+                state.students = action.payload.students || action.payload || []; // ADD: Handle both formats
+                state.error = null;
+            })
+            .addCase(fetchClassStudents.rejected, (state, action) => {
+                state.studentsLoading = false; // CHANGE: Use studentsLoading instead of loading
+                state.error = action.payload;
+            })
+
+            // Fetch today's attendance - KEEP AS IS
+            .addCase(fetchTodayAttendance.pending, (state) => {
+                state.attendanceLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchTodayAttendance.fulfilled, (state, action) => {
+                state.attendanceLoading = false;
+                state.todayAttendance = action.payload;
+                if (action.payload.attendanceTaken && action.payload.attendanceRecords) {
+                    state.attendance = action.payload.attendanceRecords.map(record => ({
+                        studentId: record.studentId,
+                        status: record.status,
+                        lateStatus: record.lateStatus,
+                        remarks: record.remarks
+                    }));
+                }
+                state.error = null;
+            })
+            .addCase(fetchTodayAttendance.rejected, (state, action) => {
+                state.attendanceLoading = false;
+                state.error = action.payload;
+            })
+
+            // Mark attendance - KEEP AS IS
+            .addCase(markAttendance.pending, (state) => {
+                state.attendanceLoading = true;
+                state.error = null;
+                state.success = false;
+            })
+            .addCase(markAttendance.fulfilled, (state, action) => {
+                state.attendanceLoading = false;
+                state.success = true;
+                state.todayAttendance = {
+                    ...state.todayAttendance,
+                    attendanceTaken: true
+                };
+                state.error = null;
+            })
+            .addCase(markAttendance.rejected, (state, action) => {
+                state.attendanceLoading = false;
+                state.error = action.payload;
+                state.success = false;
+            })
+
+            // Fetch attendance history - KEEP AS IS
+            .addCase(fetchAttendanceHistory.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchAttendanceHistory.fulfilled, (state, action) => {
+                state.loading = false;
+                state.attendanceHistory = action.payload.history || [];
+                state.error = null;
+            })
+            .addCase(fetchAttendanceHistory.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
+    }
+});
+
+export const {
+    setCurrentClass,
+    clearAttendanceData,
+    updateAttendanceStatus,
+    clearError,
+    clearStudents // ADD THIS - export the new reducer
+} = teacherSlice.actions;
+
+
+// Add to teacherSlice.js export section - KEEP ALL EXISTING AND ADD NEW
+export const selectTeacherClasses = (state) => state.teacher.classes;
+export const selectTeacherStudents = (state) => state.teacher.students;
+export const selectTeacherAttendance = (state) => state.teacher.attendance;
+export const selectTeacherTodayAttendance = (state) => state.teacher.todayAttendance;
+export const selectTeacherAttendanceHistory = (state) => state.teacher.attendanceHistory;
+export const selectTeacherLoading = (state) => state.teacher.loading;
+export const selectTeacherError = (state) => state.teacher.error;
+export const selectTeacherSuccess = (state) => state.teacher.success;
+// ADD THESE NEW SELECTORS
+export const selectStudentsLoading = (state) => state.teacher.studentsLoading;
+export const selectClassStudents = (state) => state.teacher.students; // Alias for consistency
+
+
+export default teacherSlice.reducer;
+
+================================================================================
+File: slices\themeSlice.js
+Size: 1.61 kB
+================================================================================
+
+// src/store/slices/themeSlice.js
+import { createSlice } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { themes } from '../../config/constants';
+
+const initialState = {
+    theme: 'light',
+    themeData: themes.light,
+    isDarkMode: false,
+};
+
+const themeSlice = createSlice({
+    name: 'theme',
+    initialState,
+    reducers: {
+        setTheme: (state, action) => {
+            state.theme = action.payload;
+            state.themeData = themes[action.payload] || themes.light;
+            state.isDarkMode = action.payload === 'dark';
+            AsyncStorage.setItem('theme', action.payload);
+        },
+        toggleTheme: (state) => {
+            const newTheme = state.theme === 'light' ? 'dark' : 'light';
+            state.theme = newTheme;
+            state.themeData = themes[newTheme];
+            state.isDarkMode = newTheme === 'dark';
+            AsyncStorage.setItem('theme', newTheme);
+        },
+        loadTheme: (state, action) => {
+            const savedTheme = action.payload;
+            state.theme = savedTheme || 'light';
+            state.themeData = themes[savedTheme] || themes.light;
+            state.isDarkMode = savedTheme === 'dark';
+        },
+    },
+});
+
+export const { setTheme, toggleTheme, loadTheme } = themeSlice.actions;
+
+// Selectors
+export const selectTheme = (state) => state.theme.theme;
+export const selectThemeData = (state) => state.theme.themeData;
+export const selectIsDarkMode = (state) => state.theme.isDarkMode;
+
+export default themeSlice.reducer;
+
+================================================================================
+File: slices\userSlice.js
+Size: 2.42 kB
+================================================================================
+
+// src/store/slices/userSlice.js
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+    profile: null,
+    notifications: [],
+    unreadNotifications: 0,
+    settings: {
+        notifications: true,
+        biometricLogin: false,
+        autoSync: true,
+        language: 'en',
+    },
+};
+
+const userSlice = createSlice({
+    name: 'user',
+    initialState,
+    reducers: {
+        setProfile: (state, action) => {
+            state.profile = action.payload;
+        },
+        updateProfile: (state, action) => {
+            if (state.profile) {
+                state.profile = { ...state.profile, ...action.payload };
+            }
+        },
+        addNotification: (state, action) => {
+            state.notifications.unshift({
+                ...action.payload,
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                read: false,
+            });
+            state.unreadNotifications += 1;
+        },
+        markNotificationAsRead: (state, action) => {
+            const notification = state.notifications.find(n => n.id === action.payload);
+            if (notification && !notification.read) {
+                notification.read = true;
+                state.unreadNotifications = Math.max(0, state.unreadNotifications - 1);
+            }
+        },
+        markAllNotificationsAsRead: (state) => {
+            state.notifications.forEach(notification => {
+                notification.read = true;
+            });
+            state.unreadNotifications = 0;
+        },
+        clearNotifications: (state) => {
+            state.notifications = [];
+            state.unreadNotifications = 0;
+        },
+        updateSettings: (state, action) => {
+            state.settings = { ...state.settings, ...action.payload };
+        },
+    },
+});
+
+export const {
+    setProfile,
+    updateProfile,
+    addNotification,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    clearNotifications,
+    updateSettings,
+} = userSlice.actions;
+
+// Selectors
+export const selectProfile = (state) => state.user.profile;
+export const selectNotifications = (state) => state.user.notifications;
+export const selectUnreadNotifications = (state) => state.user.unreadNotifications;
+export const selectSettings = (state) => state.user.settings;
+
+export default userSlice.reducer;

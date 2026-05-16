@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "SchoolManagementApp",
+    "slug": "schoolmanagementapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "packagerOpts": {
+      "dev": true,
+      "lan": true,
+      "hostType": "lan"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.asim-ali-786.SchoolManagementApp",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "FirebaseAppDelegateProxyEnabled": true,
+        "NSCameraUsageDescription": "This app uses the camera to capture documents",
+        "NSPhotoLibraryUsageDescription": "This app accesses photos to upload documents",
+        "NSMicrophoneUsageDescription": "This app uses microphone for audio notes",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.asim_ali_786.SchoolManagementApp",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0",
+            "minSdkVersion": 23,
+            "kotlinVersion": "1.9.24"
+          },
+          "ios": {
+            "deploymentTarget": "15.1",
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d3405158-da8a-412a-8059-b02babc0648f"
+      }
+    },
+    "owner": "asim_ali_786"
+  }
+}

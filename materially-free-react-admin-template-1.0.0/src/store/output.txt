@@ -1,0 +1,1834 @@
+
+================================================================================
+File: actions.js
+Size: 197 B
+================================================================================
+
+// action - account reducer
+export const LOGIN = 'LOGIN';
+export const LOGOUT = 'LOGOUT';
+export const MENU_OPEN = '@customization/MENU_OPEN';
+export const MENU_TYPE = '@customization/MENU_TYPE';
+ 
+
+================================================================================
+File: api\apiConfig.js
+Size: 12.78 kB
+================================================================================
+
+// export const API_BASE_URL = 'http://127.0.0.1:5735/api';
+export const API_BASE_URL = window.appConfig?.VITE_API_BASE_URL //|| import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL_FILE = window.appConfig?.VITE_API_BASE_URL_FILE || 'http://localhost:5027'
+
+export const getFileUrl = (filePath, download = false) => {
+  if (!filePath) return '#';
+
+  console.log('📁 Original file path:', filePath);
+
+  // Case 1: If it already starts with http:// or https://
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return download ? `${filePath}?download=true` : filePath;
+  }
+
+  // Case 2: If it starts with /uploads/ (like your data shows)
+  if (filePath.startsWith('/uploads/')) {
+    return download
+      ? `${API_BASE_URL_FILE}${filePath}?download=true`
+      : `${API_BASE_URL_FILE}${filePath}`;
+  }
+
+  // Case 3: If it's just a filename without path
+  const cleanFileName = filePath.replace(/^\/+/, '');
+
+  // Default to tasks directory
+  return download
+    ? `${API_BASE_URL_FILE}/uploads/tasks/${cleanFileName}?download=true`
+    : `${API_BASE_URL_FILE}/uploads/tasks/${cleanFileName}`;
+};
+
+
+
+
+
+// In apiConfig.js, add these helper functions
+export const showSuccessToast = (message) => {
+  // You can use your preferred toast library (Toastify, Material-UI Snackbar, etc.)
+  if (typeof window !== 'undefined' && window.showToast) {
+    window.showToast({ type: 'success', message });
+  } else {
+    console.log('✅ Success:', message);
+    // Fallback: alert or console log
+    alert(`✅ ${message}`);
+  }
+};
+
+export const showErrorToast = (error) => {
+  let errorMessage = 'An error occurred';
+
+  if (typeof error === 'string') {
+    errorMessage = error;
+  } else if (error?.data?.message) {
+    errorMessage = error.data.message;
+  } else if (error?.message) {
+    errorMessage = error.message;
+  } else if (error?.error) {
+    errorMessage = error.error;
+  }
+
+  if (typeof window !== 'undefined' && window.showToast) {
+    window.showToast({ type: 'error', message: errorMessage });
+  } else {
+    console.error('❌ Error:', errorMessage);
+    alert(`❌ ${errorMessage}`);
+  }
+};
+
+// ✅ Determine if file can be opened in browser
+export const canOpenInBrowser = (fileName) => {
+  if (!fileName) return false;
+
+  const extension = fileName.split('.').pop().toLowerCase();
+  const viewableExtensions = [
+    // Images
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg',
+    // Documents
+    'pdf',
+    // Text
+    'txt', 'csv', 'json', 'xml', 'html', 'htm',
+    // Audio
+    'mp3', 'wav', 'm4a', 'aac', 'ogg',
+    // Video
+    'mp4', 'webm', 'ogg'
+  ];
+
+  return viewableExtensions.includes(extension);
+};
+
+// ✅ Get file URL based on type
+export const getSmartFileUrl = (filePath) => {
+  const fileName = filePath.split('/').pop();
+
+  if (canOpenInBrowser(fileName)) {
+    // For viewable files, return direct URL
+    return getFileUrl(filePath, false);
+  } else {
+    // For non-viewable files, force download
+    return getFileUrl(filePath, true);
+  }
+};
+// ✅ File download helper with Content-Disposition
+export const getFileDownloadUrl = (filePath) => {
+  const baseUrl = getFileUrl(filePath);
+  return `${baseUrl}?download=true`;
+};
+
+// ✅ Get file size in readable format
+export const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+
+// export const API_BASE_URL = "https://jj-api.ultsol.cloud/api";
+export const AUTH_ENDPOINTS = {
+  LOGIN: '/api/Auth/login',
+  LOGOUT: '/api/Auth/logout',
+  VALIDATE_TOKEN: '/api/Auth/validate',
+  REGISTER: '/api/Auth/register',
+  REFRESH_TOKEN: '/api/Auth/refresh',
+};
+
+export const NOTIFICATION_ENDPOINTS = {
+  RULES: '/api/Notification/rules',
+  TEMPLATES: '/api/Notification/templates',
+  SEND: '/api/Notification/send',
+  HISTORY: '/api/Notification',
+  SETTINGS: '/api/Notification/settings',
+  STATS: '/api/Notification/stats',
+};
+
+export const SECTOR_ENDPOINTS = {
+  GET_ALL: '/sector',
+  GET_ACTIVE: '/sector/active',
+  GET_BY_ID: '/sector',
+  CREATE: '/sector',
+  UPDATE: '/sector',
+  PATCH: '/sector',
+  DELETE: '/sector',
+  CHECK_NAME: '/sector/check-name'
+};
+
+export const CITY_ENDPOINTS = {
+  GET_ALL: '/City',
+  GET_BY_ID: '/City',
+  CHECK_NAME: '/City/check-name',
+  CREATE: '/City',
+  UPDATE: '/City',
+  DELETE: '/City',
+  GET_HOTELS: '/City'
+};
+
+export const HOTEL_ENDPOINTS = {
+  GET_ALL: '/Hotel',
+  GET_BY_ID: '/Hotel',
+  GET_BY_CITY: '/Hotel/city',
+  CREATE: '/Hotel',
+  UPDATE: '/Hotel',
+  DELETE: '/Hotel'
+};
+
+export const PAX_ENDPOINTS = {
+  GET_ALL: '/Pax',
+  GET_BY_ID: (id) => `/Pax/${id}`,
+  CREATE: '/Pax',
+  UPDATE: '/Pax',
+  DELETE: (id) => `/Pax/${id}`,
+  CHECK_NAME: '/Pax/check-name'
+};
+
+export const RATE_VISA_ENDPOINTS = {
+  GET_ALL: '/RateVisa',
+  GET_BY_ID: (id) => `/RateVisa/${id}`,
+  CREATE: '/RateVisa',
+  UPDATE: (id) => `/RateVisa/${id}`,
+  DELETE: (id) => `/RateVisa/${id}`
+};
+
+export const RATE_HOTEL_ENDPOINTS = {
+  GET_ALL: '/RateHotel',
+  GET_BY_ID: (id) => `/RateHotel/${id}`,
+  GET_BY_COMPOSITE: (cityID, hotelID) => `/RateHotel/by-composite/${cityID}/${hotelID}`,
+  CREATE: '/RateHotel',
+  UPDATE: (id) => `/RateHotel/${id}`,
+  DELETE: (id) => `/RateHotel/${id}`
+};
+
+export const PACKAGE_ENDPOINTS = {
+  GET_ALL: '/Package',
+  GET_BY_ID: (id) => `/Package/${id}`,
+  CREATE: '/Package',
+  UPDATE: (id) => `/Package/${id}`,
+  DELETE: (id) => `/Package/${id}`,
+  CHECK_NAME: '/Package/check-name'
+};
+
+// Quotation endpoints matching your backend
+export const QUOTATION_ENDPOINTS = {
+  GET_ALL: '/Quotation',
+  GET_BY_ID: (id) => `/Quotation/${id}`,
+  CREATE: '/Quotation',
+  UPDATE: (id) => `/Quotation/${id}`,
+  DELETE: (id) => `/Quotation/${id}`,
+  GET_RATES: (cityID, hotelID) => `/Quotation/rates/${cityID}/${hotelID}`,
+  GET_RATES_BY_CITY: (cityID) => `/Quotation/rates/city/${cityID}`,
+  GET_HOTELS_BY_CITY: (cityID) => `/Quotation/hotels/city/${cityID}`,
+  CALCULATE_ACCOMMODATION: '/Quotation/calculate-accommodation'
+};
+
+// Individual table endpoints
+export const QUOTATION_ACCOMMODATION_ENDPOINTS = {
+  GET_ALL: '/QuotationAccommodation',
+  GET_BY_ID: (id) => `/QuotationAccommodation/${id}`,
+  GET_BY_QUOTATION: (quotationId) => `/QuotationAccommodation/quotation/${quotationId}`,
+  CREATE: '/QuotationAccommodation',
+  UPDATE: (id) => `/QuotationAccommodation/${id}`,
+  DELETE: (id) => `/QuotationAccommodation/${id}`,
+  BULK_CREATE: '/QuotationAccommodation/bulk'
+};
+
+export const QUOTATION_TRANSPORTATION_ENDPOINTS = {
+  GET_ALL: '/QuotationTransportation',
+  GET_BY_ID: (id) => `/QuotationTransportation/${id}`,
+  GET_BY_QUOTATION: (quotationId) => `/QuotationTransportation/quotation/${quotationId}`,
+  CREATE: '/QuotationTransportation',
+  UPDATE: (id) => `/QuotationTransportation/${id}`,
+  DELETE: (id) => `/QuotationTransportation/${id}`,
+  BULK_CREATE: '/QuotationTransportation/bulk'
+};
+
+export const QUOTATION_VISA_ENDPOINTS = {
+  GET_ALL: '/QuotationVisaService',
+  GET_BY_ID: (id) => `/QuotationVisaService/${id}`,
+  GET_BY_QUOTATION: (quotationId) => `/QuotationVisaService/quotation/${quotationId}`,
+  CREATE: '/QuotationVisaService',
+  UPDATE: (id) => `/QuotationVisaService/${id}`,
+  DELETE: (id) => `/QuotationVisaService/${id}`,
+  BULK_CREATE: '/QuotationVisaService/bulk'
+};
+
+export const QUOTATION_AIRLINES_ENDPOINTS = {
+  GET_ALL: '/QuotationAirlines',
+  GET_BY_ID: (id) => `/QuotationAirlines/${id}`,
+  GET_BY_QUOTATION: (quotationId) => `/QuotationAirlines/quotation/${quotationId}`,
+  CREATE: '/QuotationAirlines',
+  UPDATE: (id) => `/QuotationAirlines/${id}`,
+  DELETE: (id) => `/QuotationAirlines/${id}`,
+  BULK_CREATE: '/QuotationAirlines/bulk'
+};
+
+
+export const CLIENT_ENDPOINTS = {
+  GET_ALL: '/Client',
+  GET_BY_ID: (id) => `/Client/${id}`,
+  CREATE: '/Client',
+  UPDATE: (id) => `/Client/${id}`,
+  DELETE: (id) => `/Client/${id}`,
+  SEARCH: (term) => `/Client/search?term=${term}`
+};
+
+// export const USER_RIGHTS_ENDPOINTS = {
+//   USERS: '/userrights/users',
+//   FORMS: '/userrights/forms',
+//   USER_RIGHTS: '/userrights/user',
+//   CURRENT_USER_RIGHTS: '/userrights/currentuser',
+//   CURRENT_USER_PERMISSIONS: '/userrights/currentuser/permissions',
+//   BULK_SAVE: '/userrights/bulk',
+//   HAS_PERMISSION: '/userrights/haspermission',
+//   FORM_PERMISSIONS: '/userrights/formpermissions',
+//   USER_FORMS: '/userrights/userforms',
+//   USER_FORM_BY_ID: (id) => `/userrights/userforms/${id}`,
+// };
+
+
+// USER RIGHTS ENDPOINTS - CORRECTED to match your backend
+export const USER_RIGHTS_ENDPOINTS = {
+  USERS: '/UserRights/Users',
+  FORMS: '/UserRights/Forms',
+  USER_RIGHTS: '/UserRights/User', // Note: This is /User/{userId} not /User?userId={userId}
+  CURRENT_USER_RIGHTS: '/UserRights/CurrentUser',
+  CURRENT_USER_PERMISSIONS: '/UserRights/CurrentUser/Permissions',
+  BULK_SAVE: '/UserRights/Bulk',
+  HAS_PERMISSION: '/UserRights/HasPermission',
+  FORM_PERMISSIONS: '/UserRights/FormPermissions',
+  TEST_CONNECTION: '/UserRights/TestConnection',
+  CHECK_DATA: '/UserRights/CheckData'
+};
+
+// apiConfig.js - Add Master endpoints
+export const MASTER_ENDPOINTS = {
+  GET_ALL: '/master',
+  GET_BY_ID: (id) => `/master/${id}`,
+  CREATE: '/master',
+  UPDATE: (id) => `/master/${id}`,
+  DELETE: (id) => `/master/${id}`,
+  COUNT: '/master/count',
+  SEARCH: (term) => `/master/search?term=${encodeURIComponent(term)}`,
+  CHECK_VNO: (vNo, excludeId = null) =>
+    excludeId ? `/master/check-vno/${vNo}?excludeId=${excludeId}` : `/master/check-vno/${vNo}`
+};
+
+// src/store/api/apiConfig.js
+export const ADVERTISEMENT_ENDPOINTS = {
+  // Master endpoints
+  GET_ALL_MASTERS: '/Advertisement/masters',
+  GET_MASTER_BY_ID: (id) => `/Advertisement/masters/${id}`,
+  CREATE_MASTER: '/Advertisement/masters',
+  UPDATE_MASTER: (id) => `/Advertisement/masters/${id}`,
+  DELETE_MASTER: (id) => `/Advertisement/masters/${id}`,
+  CHECK_VNO: (vNo, excludeId = null) =>
+    excludeId ? `/Advertisement/masters/check-vno/${vNo}?excludeId=${excludeId}`
+      : `/Advertisement/masters/check-vno/${vNo}`,
+
+  // Account endpoints
+  GET_ALL_ACCOUNTS: '/Advertisement/accounts',
+  SEARCH_ACCOUNTS: (term) => `/Advertisement/accounts/search?term=${term}`
+};
+
+// src/store/api/apiConfig.js - Add account endpoints
+export const ACCOUNT_ENDPOINTS = {
+  GET_ALL: '/account',
+  GET_BY_ID: (id) => `/account/${id}`,
+  CHECK_NAME: (accountTitle) => `/account/check-name/${encodeURIComponent(accountTitle)}`,
+  CREATE: '/account',
+  UPDATE: (id) => `/account/${id}`,
+  DELETE: (id) => `/account/${id}`,
+};
+
+// Add to your existing apiConfig.js
+export const ITEM_CATEGORY_ENDPOINTS = {
+  GET_ALL: '/itemcategory',
+  GET_BY_ID: (id) => `/itemcategory/${id}`,
+  GET_BY_GROUP: (groupId) => `/itemcategory/by-group/${groupId}`,
+  CHECK_CODE: (categoryCode) => `/itemcategory/check-code/${categoryCode}`,
+  CREATE: '/itemcategory',
+  UPDATE: (id) => `/itemcategory/${id}`,
+  DELETE: (id) => `/itemcategory/${id}`,
+};
+
+
+
+
+// Item Management Endpoints
+export const ITEM_ENDPOINTS = {
+  GET_ALL: '/Item',
+  GET_BY_ID: (id) => `/Item/${id}`,
+  CREATE: '/Item',
+  UPDATE: (id) => `/Item/${id}`,
+  DELETE: (id) => `/Item/${id}`,
+  CHECK_CODE: (itemCode) => `/Item/check-code/${itemCode}`,
+};
+
+export const ITEM_GROUP_ENDPOINTS = {
+  GET_ALL: '/ItemGroup',
+  GET_BY_ID: (id) => `/ItemGroup/${id}`,
+  DROPDOWN: '/ItemGroup/dropdown',
+  CHECK_CODE: (groupCode) => `/ItemGroup/check-code/${groupCode}`,
+  CREATE: '/ItemGroup',
+  UPDATE: (id) => `/ItemGroup/${id}`,
+  DELETE: (id) => `/ItemGroup/${id}`,
+};
+
+
+export const ITEM_UNIT_ENDPOINTS = {
+  GET_ALL: '/ItemUnit',
+  GET_BY_ID: (id) => `/ItemUnit/${id}`,
+  DROPDOWN: '/ItemUnit/dropdown',
+  CREATE: '/ItemUnit',
+  UPDATE: (id) => `/ItemUnit/${id}`,
+  DELETE: (id) => `/ItemUnit/${id}`,
+};
+
+export const LEVEL4_ENDPOINTS = {
+  GET_ALL: '/Level4',
+  GET_BY_ID: (id) => `/Level4/${id}`,
+  DROPDOWN: '/Level4/dropdown',
+  ACCOUNTS_BY_TYPE: (accountType) => `/Level4/accounts/${accountType}`,
+  CREATE: '/Level4',
+  UPDATE: (id) => `/Level4/${id}`,
+  DELETE: (id) => `/Level4/${id}`,
+};
+
+
+// Add to your existing apiConfig.js
+export const PROJECT_ENDPOINTS = {
+  GET_ALL: '/projects',
+  GET_BY_ID: (id) => `/projects/${id}`,
+  CREATE: '/projects',
+  UPDATE: (id) => `/projects/${id}`,
+  DELETE: (id) => `/projects/${id}`,
+  GET_USER_PROJECTS: '/projects/user/my-projects'
+};
+
+================================================================================
+File: api\authApi.js
+Size: 1.66 kB
+================================================================================
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL, AUTH_ENDPOINTS } from './apiConfig';
+
+export const authApi = createApi({
+  reducerPath: 'authApi',
+  baseQuery: fetchBaseQuery({
+    baseUrl: API_BASE_URL,
+    
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem('token');
+      if (token) headers.set('authorization', `Bearer ${token}`);
+      headers.set('Content-Type', 'application/json');
+      return headers;
+    },
+    credentials: 'include'
+  }),
+  tagTypes: ['Auth'],
+  endpoints: (builder) => ({
+    login: builder.mutation({
+      query: (credentials) => ({
+        url: AUTH_ENDPOINTS.LOGIN,
+        method: 'POST',
+        body: credentials,
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+    register: builder.mutation({
+      query: (userData) => ({
+        url: AUTH_ENDPOINTS.REGISTER,
+        method: 'POST',
+        body: userData,
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+    logout: builder.mutation({
+      query: () => ({
+        url: AUTH_ENDPOINTS.LOGOUT,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Auth'],
+    }),
+    getProfile: builder.query({
+      query: () => AUTH_ENDPOINTS.PROFILE,
+      providesTags: ['Auth'],
+    }),
+    validateUsername: builder.mutation({
+      query: (username) => ({
+        url: AUTH_ENDPOINTS.VALIDATE_USERNAME,
+        method: 'POST',
+        body: { username },
+      }),
+    }),
+  }),
+});
+
+export const {
+  useLoginMutation,
+  useRegisterMutation,
+  useLogoutMutation,
+  useGetProfileQuery,
+  useValidateUsernameMutation,
+} = authApi;
+
+================================================================================
+File: api\campusApi.js
+Size: 1.07 kB
+================================================================================
+
+// store/api/campusApi.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from './apiConfig';
+
+export const campusApi = createApi({
+    reducerPath: 'campusApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: API_BASE_URL,
+        prepareHeaders: (headers) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        },
+    }),
+    tagTypes: ['Campus'],
+    endpoints: (builder) => ({
+        getCampuses: builder.query({
+            query: () => '/api/Campus',
+            transformResponse: (response) => {
+                if (response.data) return response.data;
+                if (response.result) return response.result;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Campus'],
+        }),
+    }),
+});
+
+export const { useGetCampusesQuery } = campusApi;
+
+================================================================================
+File: api\classApi.js
+Size: 1.68 kB
+================================================================================
+
+// store/api/classApi.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from './apiConfig';
+
+export const classApi = createApi({
+    reducerPath: 'classApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: API_BASE_URL,
+        prepareHeaders: (headers) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        },
+    }),
+    tagTypes: ['Class'],
+    endpoints: (builder) => ({
+        getClasses: builder.query({
+            query: () => '/api/Class',  // ✅ Changed from /api/AddClass
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Class'],
+        }),
+        getActiveClasses: builder.query({
+            query: () => '/api/Class/active',  // ✅ New endpoint
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Class'],
+        }),
+        getClassById: builder.query({
+            query: (id) => `/api/Class/${id}`,
+        }),
+    }),
+});
+
+export const { useGetClassesQuery, useGetActiveClassesQuery, useGetClassByIdQuery } = classApi;
+
+================================================================================
+File: api\notificationApi.js
+Size: 11.17 kB
+================================================================================
+
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from './apiConfig';
+
+export const notificationApi = createApi({
+    reducerPath: 'notificationApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: API_BASE_URL,
+        credentials: 'include',
+        prepareHeaders: (headers, { getState }) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        },
+    }),
+    tagTypes: ['NotificationRule', 'Notification', 'NotificationLog', 'NotificationHistory', 'BatchNotification'],
+    endpoints: (builder) => ({
+        getNotificationRules: builder.query({
+            query: (params = {}) => {
+                const { active } = params;
+                const urlParams = new URLSearchParams();
+                if (active !== undefined) {
+                    urlParams.append('active', active);
+                }
+                return `/api/notificationrules?${urlParams.toString()}`;
+            },
+            providesTags: ['NotificationRule'],
+        }),
+
+        getNotificationRuleById: builder.query({
+            query: (id) => `/api/notificationrules/${id}`,
+            providesTags: (result, error, id) => [{ type: 'NotificationRule', id }],
+        }),
+
+        createNotificationRule: builder.mutation({
+            query: (ruleData) => ({
+                url: '/api/notificationrules',
+                method: 'POST',
+                body: ruleData,
+            }),
+            invalidatesTags: ['NotificationRule'],
+        }),
+
+        updateNotificationRule: builder.mutation({
+            query: ({ id, ...ruleData }) => {
+                console.log('Sending update request for ID:', id, 'with data:', ruleData);
+                return {
+                    url: `/api/notificationrules/${id}/update`,
+                    method: 'POST',
+                    body: ruleData,
+                };
+            },
+            invalidatesTags: (result, error, { id }) => [{ type: 'NotificationRule', id }],
+        }),
+
+        deleteNotificationRule: builder.mutation({
+            query: (id) => ({
+                url: `/api/notificationrules/${id}/delete`,
+                method: 'POST',
+                body:{}
+            }),
+            invalidatesTags: ['NotificationRule'],
+        }),
+
+        testNotificationRule: builder.mutation({
+            query: ({ id, ...testData }) => ({
+                url: `/api/notificationrules/${id}/test`,
+                method: 'POST',
+                body: testData,
+            }),
+        }),
+
+        activateNotificationRule: builder.mutation({
+            query: ({ id, isActive }) => ({
+                url: `/api/notificationrules/${id}/activate`,
+                method: 'POST',
+                body: { isActive },
+            }),
+            invalidatesTags: (result, error, { id }) => [{ type: 'NotificationRule', id }],
+        }),
+
+        executeNotificationRule: builder.mutation({
+            query: (id) => ({
+                url: `/api/notificationrules/${id}/execute`,
+                method: 'POST',
+            }),
+        }),
+
+        getNotifications: builder.query({
+            query: (params = {}) => {
+                const { page = 1, pageSize = 10, status, fromDate, toDate } = params;
+                const urlParams = new URLSearchParams();
+
+                if (page) urlParams.append('page', page);
+                if (pageSize) urlParams.append('pageSize', pageSize);
+                if (status && status !== 'all') urlParams.append('status', status);
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+
+                return `/api/notifications?${urlParams.toString()}`;
+            },
+            providesTags: ['Notification'],
+        }),
+
+        getUserNotifications: builder.query({
+            query: ({ userId, page = 1, pageSize = 20 }) => ({
+                url: `/api/notifications/user/${userId}`,
+                params: { page, pageSize },
+            }),
+            providesTags: ['Notification'],
+        }),
+
+        getUnreadCount: builder.query({
+            query: (userId) => `/api/notifications/unread-count/${userId}`,
+        }),
+
+        markAsRead: builder.mutation({
+            query: ({ id, userId }) => ({
+                url: `/api/notifications/${id}/read?userId=${userId}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+
+        markAllAsRead: builder.mutation({
+            query: (userId) => ({
+                url: `/api/notifications/mark-all-read?userId=${userId}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+
+        getNotificationStats: builder.query({
+            query: (params = {}) => {
+                const { fromDate, toDate } = params;
+                const urlParams = new URLSearchParams();
+
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+
+                return `/api/notifications/stats?${urlParams.toString()}`;
+            },
+        }),
+
+        getPendingNotifications: builder.query({
+            query: (limit = 100) => ({
+                url: '/api/notifications/pending',
+                params: { limit },
+            }),
+            providesTags: ['Notification'],
+        }),
+
+        getFailedNotifications: builder.query({
+            query: (limit = 100) => ({
+                url: '/api/notifications/failed',
+                params: { limit },
+            }),
+            providesTags: ['Notification'],
+        }),
+
+        retryNotification: builder.mutation({
+            query: (id) => ({
+                url: `/api/notifications/retry/${id}`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+
+        retryAllFailed: builder.mutation({
+            query: (ruleId) => {
+                const url = ruleId ?
+                    `/api/notifications/retry-failed?ruleId=${ruleId}` :
+                    '/api/notifications/retry-failed';
+                return {
+                    url: url,
+                    method: 'POST',
+                };
+            },
+            invalidatesTags: ['Notification'],
+        }),
+
+        cleanupNotifications: builder.mutation({
+            query: (days = 30) => ({
+                url: `/api/notifications/cleanup?days=${days}`,
+                method: 'POST',
+            }),
+        }),
+
+        deleteNotification: builder.mutation({
+            query: (id) => ({
+                url: `/api/notifications/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Notification'],
+        }),
+
+        getNotificationLogs: builder.query({
+            query: (params = {}) => {
+                const { fromDate, toDate, action, page = 1, pageSize = 50 } = params;
+                const urlParams = new URLSearchParams();
+
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+                if (action) urlParams.append('action', action);
+                urlParams.append('page', page);
+                urlParams.append('pageSize', pageSize);
+
+                return `/api/adminnotification/logs?${urlParams.toString()}`;
+            },
+            providesTags: ['NotificationLog'],
+        }),
+
+        getNotificationHistory: builder.query({
+            query: (params = {}) => {
+                const { fromDate, toDate, userId, category, page = 1, pageSize = 50 } = params;
+                const urlParams = new URLSearchParams();
+
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+                if (userId) urlParams.append('userId', userId);
+                if (category) urlParams.append('category', category);
+                urlParams.append('page', page);
+                urlParams.append('pageSize', pageSize);
+
+                return `/api/adminnotification/history?${urlParams.toString()}`;
+            },
+            providesTags: ['NotificationHistory'],
+        }),
+
+        getBatchNotifications: builder.query({
+            query: (params = {}) => {
+                const { status, fromDate, toDate } = params;
+                const urlParams = new URLSearchParams();
+
+                if (status) urlParams.append('status', status);
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+
+                return `/api/adminnotification/batch?${urlParams.toString()}`;
+            },
+            providesTags: ['BatchNotification'],
+        }),
+
+        getSystemStats: builder.query({
+            query: (params = {}) => {
+                const { fromDate, toDate } = params;
+                const urlParams = new URLSearchParams();
+
+                if (fromDate) urlParams.append('fromDate', fromDate);
+                if (toDate) urlParams.append('toDate', toDate);
+
+                return `/api/adminnotification/system-stats?${urlParams.toString()}`;
+            },
+        }),
+
+        sendBroadcastNotification: builder.mutation({
+            query: (data) => ({
+                url: '/api/adminnotification/broadcast',
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: ['Notification', 'BatchNotification'],
+        }),
+
+        testWebhook: builder.mutation({
+            query: (data) => ({
+                url: '/api/adminnotification/test-webhook',
+                method: 'POST',
+                body: data,
+            }),
+        }),
+    }),
+});
+
+export const {
+    useGetNotificationRulesQuery,
+    useGetNotificationRuleByIdQuery,
+    useCreateNotificationRuleMutation,
+    useUpdateNotificationRuleMutation,
+    useDeleteNotificationRuleMutation,
+    useTestNotificationRuleMutation,
+    useActivateNotificationRuleMutation,
+    useExecuteNotificationRuleMutation,
+    useGetNotificationsQuery,
+    useGetUserNotificationsQuery,
+    useGetUnreadCountQuery,
+    useMarkAsReadMutation,
+    useMarkAllAsReadMutation,
+    useGetNotificationStatsQuery,
+    useGetPendingNotificationsQuery,
+    useGetFailedNotificationsQuery,
+    useRetryNotificationMutation,
+    useRetryAllFailedMutation,
+    useCleanupNotificationsMutation,
+    useDeleteNotificationMutation,
+    useGetNotificationLogsQuery,
+    useGetNotificationHistoryQuery,
+    useGetBatchNotificationsQuery,
+    useGetSystemStatsQuery,
+    useSendBroadcastNotificationMutation,
+    useTestWebhookMutation,
+} = notificationApi;
+
+================================================================================
+File: api\sectionApi.js
+Size: 1.68 kB
+================================================================================
+
+// store/api/sectionApi.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from './apiConfig';
+
+export const sectionApi = createApi({
+    reducerPath: 'sectionApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: API_BASE_URL,
+        prepareHeaders: (headers) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        },
+    }),
+    tagTypes: ['Section'],
+    endpoints: (builder) => ({
+        getSections: builder.query({
+            query: () => '/api/Section',  // ✅ Changed from /api/AddSection
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Section'],
+        }),
+        getSectionsByClass: builder.query({
+            query: (classId) => `/api/Section/byclass/${classId}`,  // ✅ Changed from /api/AddSection/byclass
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: (result, error, classId) => [{ type: 'Section', id: `class_${classId}` }],
+        }),
+    }),
+});
+
+export const { useGetSectionsQuery, useGetSectionsByClassQuery } = sectionApi;
+
+================================================================================
+File: api\studentApi.js
+Size: 5.34 kB
+================================================================================
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from './apiConfig';
+
+export const studentApi = createApi({
+    reducerPath: 'studentApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: API_BASE_URL,
+        prepareHeaders: (headers) => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        },
+    }),
+    tagTypes: ['Student', 'Section'],
+    endpoints: (builder) => ({
+        // Get students by class ID
+        getStudentsByClass: builder.query({
+            query: (classId) => `/api/Student/byclass/${classId}`,
+            transformResponse: (response) => {
+                console.log('Raw Student API response by class id:', response);
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: (result, error, classId) => [{ type: 'Student', id: `class_${classId}` }],
+        }),
+
+        // Get students by section ID
+        getStudentsBySection: builder.query({
+            query: (sectionId) => `/api/Student/bysection/${sectionId}`,
+            transformResponse: (response) => {
+                console.log('Raw Student API response by section id:', response);
+                
+                let students = [];
+                if (response?.data) students = response.data;
+                else if (response?.Data) students = response.Data;
+                else if (Array.isArray(response)) students = response;
+                
+                // Log the first student to see what fields are present
+                if (students && students.length > 0) {
+                    console.log('First student fields:', Object.keys(students[0]));
+                    console.log('RollNo value:', students[0].RollNo);
+                    console.log('roll_no value:', students[0].roll_no);
+                }
+                
+                return students;
+            },
+            providesTags: (result, error, sectionId) => [{ type: 'Student', id: `section_${sectionId}` }],
+        }),
+
+        // Debug endpoint to see raw student data
+        getStudentsBySectionDebug: builder.query({
+            query: (sectionId) => `/api/Student/bysection-debug/${sectionId}`,
+            transformResponse: (response) => {
+                console.log('Debug response:', response);
+                return response;
+            },
+        }),
+
+        // Get sections that have students
+        getSectionsWithStudents: builder.query({
+            query: () => `/api/Student/sections-with-students`,
+            transformResponse: (response) => {
+                console.log('Raw Sections with Students API response: with section id ', response);
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Section'],
+        }),
+
+        // Get all sections with counts
+        getAllSectionsWithCounts: builder.query({
+            query: () => `/api/Student/all-sections-with-counts`,
+            transformResponse: (response) => {
+                console.log('Raw All Sections with Counts API response: with section id ', response);
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+            providesTags: ['Section'],
+        }),
+
+        // Get students by family
+        getStudentsByFamily: builder.query({
+            query: (familyCode) => `/api/Student/byfamily/${familyCode}`,
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+        }),
+
+        // Get parents by student
+        getParentsByStudent: builder.query({
+            query: (studentId) => `/api/Student/parents/${studentId}`,
+            transformResponse: (response) => {
+                if (response?.data) return response.data;
+                if (response?.Data) return response.Data;
+                if (Array.isArray(response)) return response;
+                return [];
+            },
+        }),
+
+        // Debug endpoint
+        debugStudentSections: builder.query({
+            query: () => `/api/Student/debug-student-sections`,
+            transformResponse: (response) => {
+                return response;
+            },
+        }),
+    }),
+});
+
+export const {
+    useGetStudentsByClassQuery,
+    useGetStudentsBySectionQuery,
+    useGetStudentsBySectionDebugQuery,
+    useGetSectionsWithStudentsQuery,
+    useGetAllSectionsWithCountsQuery,
+    useGetStudentsByFamilyQuery,
+    useGetParentsByStudentQuery,
+    useDebugStudentSectionsQuery,
+} = studentApi;
+
+================================================================================
+File: api\userRightsApi.js
+Size: 6.09 kB
+================================================================================
+
+/* eslint-disable prettier/prettier */
+// userRightsApi.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL, USER_RIGHTS_ENDPOINTS } from './apiConfig';
+import { jwtDecode } from 'jwt-decode';
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+const baseQuery = fetchBaseQuery({
+  baseUrl: API_BASE_URL,
+  prepareHeaders: (headers, { getState }) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    headers.set('Content-Type', 'application/json');
+    return headers;
+  },
+  credentials: 'include',
+});
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await baseQuery(args, api, extraOptions);
+
+  if (result.error && (result.error.status === 401 || result.error.originalStatus === 401)) {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiry');
+      window.location.href = '/application/login';
+      return result;
+    }
+
+    try {
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+      const timeUntilExpiry = decoded.exp - currentTime;
+
+      if (timeUntilExpiry < 300) {
+        if (!isRefreshing) {
+          isRefreshing = true;
+
+          try {
+            const refreshResult = await baseQuery(
+              {
+                url: '/auth/refresh-token',
+                method: 'POST',
+                body: { token }
+              },
+              api,
+              extraOptions
+            );
+
+            if (refreshResult.data && refreshResult.data.token) {
+              const newToken = refreshResult.data.token;
+              localStorage.setItem('token', newToken);
+
+              const newDecoded = jwtDecode(newToken);
+              localStorage.setItem('tokenExpiry', newDecoded.exp.toString());
+
+              isRefreshing = false;
+              processQueue(null, newToken);
+
+              result = await baseQuery(args, api, extraOptions);
+            } else {
+              throw new Error('Token refresh failed');
+            }
+          } catch (error) {
+            isRefreshing = false;
+            processQueue(error, null);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('tokenExpiry');
+            window.location.href = '/application/login';
+            return result;
+          }
+        } else {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => {
+            return baseQuery(args, api, extraOptions);
+          }).catch(() => {
+            return result;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Token decode error:', error);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiry');
+      window.location.href = '/application/login';
+    }
+  }
+
+  return result;
+};
+
+export const userRightsApi = createApi({
+  reducerPath: 'userRightsApi',
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ['UserRights', 'Users', 'Forms'],
+  endpoints: (builder) => ({
+    // Get all users - FIXED ENDPOINT
+    getUsers: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.USERS,
+      providesTags: ['Users'],
+    }),
+
+    // Get all forms - FIXED ENDPOINT
+    getForms: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.FORMS,
+      providesTags: ['Forms'],
+    }),
+
+    // Get user rights by user ID - FIXED ENDPOINT
+    getUserRights: builder.query({
+      query: (userId) => `${USER_RIGHTS_ENDPOINTS.USER_RIGHTS}/${userId}`,
+      providesTags: (result, error, userId) => [
+        { type: 'UserRights', id: userId },
+        { type: 'UserRights', id: 'LIST' }
+      ],
+    }),
+
+    // Get current user rights
+    getCurrentUserRights: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.CURRENT_USER_RIGHTS,
+      providesTags: ['UserRights'],
+    }),
+
+    // Get current user permissions
+    getCurrentUserPermissions: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.CURRENT_USER_PERMISSIONS,
+      providesTags: ['UserRights'],
+    }),
+
+    // Save user rights in bulk
+    saveUserRights: builder.mutation({
+      query: (userRightsData) => {
+        console.log('Saving user rights:', userRightsData);
+        return {
+          url: USER_RIGHTS_ENDPOINTS.BULK_SAVE,
+          method: 'POST',
+          body: userRightsData,
+        };
+      },
+      invalidatesTags: ['UserRights', 'Users'],
+    }),
+
+    // Check permission for specific form
+    hasPermission: builder.query({
+      query: ({ formName, permission }) =>
+        `${USER_RIGHTS_ENDPOINTS.HAS_PERMISSION}?formName=${encodeURIComponent(formName)}&permission=${permission}`,
+    }),
+
+    // Get all permissions for a form
+    getFormPermissions: builder.query({
+      query: (formName) => `${USER_RIGHTS_ENDPOINTS.FORM_PERMISSIONS}/${formName}`,
+    }),
+
+    // Test connection
+    testConnection: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.TEST_CONNECTION,
+    }),
+
+    // Check data
+    checkData: builder.query({
+      query: () => USER_RIGHTS_ENDPOINTS.CHECK_DATA,
+    }),
+  }),
+});
+
+export const {
+  useGetUsersQuery,
+  useGetFormsQuery,
+  useGetUserRightsQuery,
+  useGetCurrentUserRightsQuery,
+  useGetCurrentUserPermissionsQuery,
+  useSaveUserRightsMutation,
+  useHasPermissionQuery,
+  useGetFormPermissionsQuery,
+  useTestConnectionQuery,
+  useCheckDataQuery,
+  useLazyGetUsersQuery,
+  useLazyGetFormsQuery,
+  useLazyGetUserRightsQuery,
+} = userRightsApi;
+
+================================================================================
+File: api\usersApi.js
+Size: 2.96 kB
+================================================================================
+
+// store/api/usersApi.js
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from '../api/apiConfig';
+
+export const usersApi = createApi({
+    reducerPath: 'usersApi',
+    baseQuery: fetchBaseQuery({
+        baseUrl: `${API_BASE_URL}/api/Users`,  // ✅ Changed from /users to /api/Users
+        prepareHeaders: (headers) => {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        },
+        credentials: 'include',
+    }),
+    tagTypes: ['User'],
+    endpoints: (builder) => ({
+        getUsers: builder.query({
+            query: () => '',  // Now this will call /api/Users
+            providesTags: ['User'],
+        }),
+        getProfile: builder.query({
+            query: () => '/profile',
+        }),
+        validateUsername: builder.query({
+            query: (username) => `/validate-username?username=${encodeURIComponent(username)}`,
+        }),
+        createUser: builder.mutation({
+            query: (userData) => ({
+                url: '',
+                method: 'POST',
+                body: userData,
+            }),
+            invalidatesTags: ['User'],
+        }),
+        updateUser: builder.mutation({
+            query: ({ id, ...userData }) => ({
+                url: `/${id}/update`,
+                method: 'POST',
+                body: userData,
+            }),
+            invalidatesTags: ['User'],
+        }),
+        deleteUser: builder.mutation({
+            query: (id) => ({
+                url: `/${id}`,
+                method: 'DELETE',  // ✅ Changed to DELETE
+            }),
+            invalidatesTags: ['User'],
+        }),
+        changePassword: builder.mutation({
+            query: (passwordData) => ({
+                url: '/change-password',
+                method: 'POST',
+                body: passwordData,
+            }),
+        }),
+        resetUserPassword: builder.mutation({
+            query: ({ id, newPassword }) => ({
+                url: `/${id}/reset-password`,
+                method: 'POST',
+                body: { newPassword },
+            }),
+        }),
+        toggleUserStatus: builder.mutation({
+            query: ({ id, isActive }) => ({
+                url: `/${id}/status`,
+                method: 'POST',
+                body: { isActive },
+            }),
+            invalidatesTags: ['User'],
+        }),
+    }),
+});
+
+export const {
+    useGetUsersQuery,
+    useGetProfileQuery,
+    useCreateUserMutation,
+    useUpdateUserMutation,
+    useDeleteUserMutation,
+    useChangePasswordMutation,
+    useValidateUsernameQuery,
+    useResetUserPasswordMutation,
+    useToggleUserStatusMutation,
+} = usersApi;
+
+================================================================================
+File: customizationReducer.js
+Size: 642 B
+================================================================================
+
+// action - state management
+import * as actionTypes from './actions';
+
+// ==============================|| CUSTOMIZATION REDUCER ||============================== //
+
+export const initialState = {
+  isOpen: 'dashboard', //for active default menu
+  navType: ''
+};
+
+const customizationReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case actionTypes.MENU_OPEN:
+      return {
+        ...state,
+        isOpen: action.isOpen
+      };
+    case actionTypes.MENU_TYPE:
+      return {
+        ...state,
+        navType: action.navType
+      };
+    default:
+      return state;
+  }
+};
+
+export default customizationReducer;
+
+
+================================================================================
+File: reducer.js
+Size: 987 B
+================================================================================
+
+// store/reducer.js
+import { combineReducers } from 'redux';
+import customizationReducer from './customizationReducer';
+import authReducer from './slices/authSlice';
+import { authApi } from './api/authApi';
+import { usersApi } from './api/usersApi';
+import { notificationApi } from './api/notificationApi';
+import { classApi } from './api/classApi';
+import { sectionApi } from './api/sectionApi';
+import { campusApi } from './api/campusApi';
+import { studentApi } from './api/studentApi';
+
+const reducer = combineReducers({
+    customization: customizationReducer,
+    auth: authReducer,
+
+    // RTK Query reducers
+    [authApi.reducerPath]: authApi.reducer,
+    [usersApi.reducerPath]: usersApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
+    [classApi.reducerPath]: classApi.reducer,
+    [sectionApi.reducerPath]: sectionApi.reducer,
+    [campusApi.reducerPath]: campusApi.reducer,
+    [studentApi.reducerPath]: studentApi.reducer,
+});
+
+export default reducer;
+
+================================================================================
+File: slices\authSlice.js
+Size: 9.98 kB
+================================================================================
+
+// store/slices/authSlice.js
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { API_BASE_URL } from '../api/apiConfig';
+import { jwtDecode } from 'jwt-decode';
+
+// Login thunk with simplified error handling
+export const loginUser = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
+  try {
+    console.log('🔍 DEBUG - Attempting login to:', `${API_BASE_URL}/api/Auth/login`);
+    console.log('🔍 DEBUG - Credentials:', {
+      username: credentials.UserName,
+      password: '***' // Don't log actual password
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/Auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    console.log('🔍 DEBUG - Response status:', response.status);
+    console.log('🔍 DEBUG - Response ok:', response.ok);
+
+    // Check if response is OK
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🔍 DEBUG - Response error text:', errorText);
+
+      let errorMessage = `Login failed: ${response.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // If not JSON, use text
+        errorMessage = errorText || errorMessage;
+      }
+
+      return rejectWithValue(errorMessage);
+    }
+
+    // Parse successful response
+    const data = await response.json();
+    console.log('🔍 DEBUG - Login successful:', {
+      token: data.token ? 'Token received' : 'No token',
+      user: data.user ? 'User data received' : 'No user data'
+    });
+
+    // Store data
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+
+    // Store token expiry if token exists
+    if (data.token) {
+      try {
+        const decoded = jwtDecode(data.token);
+        localStorage.setItem('tokenExpiry', decoded.exp.toString());
+        console.log('🔍 DEBUG - Token expiry set:', new Date(decoded.exp * 1000));
+      } catch (error) {
+        console.error('🔍 DEBUG - Error decoding token:', error);
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error('🔍 DEBUG - Network/connection error:', error);
+
+    // Specific error handling
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      return rejectWithValue('Cannot connect to server. Please check if backend is running on http://localhost:5027');
+    }
+
+    if (error.message.includes('CORS')) {
+      return rejectWithValue('CORS error: Check backend CORS configuration');
+    }
+
+    return rejectWithValue(error.message || 'Network error occurred');
+  }
+});
+
+// Validate token
+export const validateToken = createAsyncThunk('auth/validate', async (_, { rejectWithValue }) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No token found');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/Auth/validate`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Token validation failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    return rejectWithValue(error.message);
+  }
+});
+
+// Logout
+export const logoutUser = createAsyncThunk('auth/logout', async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      await fetch(`${API_BASE_URL}/api/Auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('tokenExpiry');
+  }
+
+  return null;
+});
+
+// Check token expiry
+export const checkTokenExpiry = () => (dispatch) => {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    dispatch(forceLogout());
+    return;
+  }
+
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+
+    if (decoded.exp < currentTime) {
+      dispatch(forceLogout());
+    }
+  } catch (error) {
+    console.error('Token expiry check error:', error);
+    dispatch(forceLogout());
+  }
+};
+
+export const registerUser = createAsyncThunk('auth/register', async (userData, { rejectWithValue }) => {
+  try {
+    console.log('🔍 DEBUG - Attempting registration to:', `${API_BASE_URL}/api/Auth/register`);
+    console.log('🔍 DEBUG - User data:', {
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      email: userData.email,
+      username: userData.username || userData.email,
+      password: '***' // Don't log actual password
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/Auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    console.log('🔍 DEBUG - Response status:', response.status);
+    console.log('🔍 DEBUG - Response ok:', response.ok);
+
+    // Check if response is OK
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🔍 DEBUG - Response error text:', errorText);
+
+      let errorMessage = `Registration failed: ${response.status}`;
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.title || errorMessage;
+      } catch (e) {
+        // If not JSON, use text
+        errorMessage = errorText || errorMessage;
+      }
+
+      return rejectWithValue(errorMessage);
+    }
+
+    // Parse successful response
+    const data = await response.json();
+    console.log('🔍 DEBUG - Registration successful:', {
+      token: data.token ? 'Token received' : 'No token',
+      user: data.user ? 'User data received' : 'No user data'
+    });
+
+    // Store data if auto-login after registration
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+    }
+
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+
+    // Store token expiry if token exists
+    if (data.token) {
+      try {
+        const decoded = jwtDecode(data.token);
+        localStorage.setItem('tokenExpiry', decoded.exp.toString());
+        console.log('🔍 DEBUG - Token expiry set:', new Date(decoded.exp * 1000));
+      } catch (error) {
+        console.error('🔍 DEBUG - Error decoding token:', error);
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.error('🔍 DEBUG - Network/connection error during registration:', error);
+
+    // Specific error handling
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      return rejectWithValue('Cannot connect to server. Please check if backend is running');
+    }
+
+    if (error.message.includes('CORS')) {
+      return rejectWithValue('CORS error: Check backend CORS configuration');
+    }
+
+    return rejectWithValue(error.message || 'Network error occurred during registration');
+  }
+});
+
+
+// Initial state
+const initialState = {
+  user: JSON.parse(localStorage.getItem('user')) || null,
+  token: localStorage.getItem('token') || null,
+  isAuthenticated: !!localStorage.getItem('token'),
+  loading: false,
+  error: null,
+  tokenValid: false,
+};
+
+// Slice
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+    forceLogout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
+      state.tokenValid = false;
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiry');
+    },
+    updateUser: (state, action) => {
+      state.user = { ...state.user, ...action.payload };
+      localStorage.setItem('user', JSON.stringify(state.user));
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // Login
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user || null;
+        state.token = action.payload.token || null;
+        state.isAuthenticated = true;
+        state.tokenValid = true;
+        state.error = null;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.isAuthenticated = false;
+        state.tokenValid = false;
+      })
+      // Validate token
+      .addCase(validateToken.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(validateToken.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user || state.user;
+        state.isAuthenticated = true;
+        state.tokenValid = true;
+      })
+      .addCase(validateToken.rejected, (state) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.tokenValid = false;
+      })
+      // Logout
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.tokenValid = false;
+        state.error = null;
+      });
+  },
+});
+
+export const { clearError, forceLogout, updateUser } = authSlice.actions;
+export default authSlice.reducer;
+
+================================================================================
+File: slices\customizationSlice.js
+Size: 702 B
+================================================================================
+
+// store/slices/customizationSlice.js
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  isOpen: 'dashboard', // for active default menu
+  navType: '',
+  drawerOpen: false,
+};
+
+const customizationSlice = createSlice({
+  name: 'customization',
+  initialState,
+  reducers: {
+    menuOpen: (state, action) => {
+      state.isOpen = action.payload;
+    },
+    menuType: (state, action) => {
+      state.navType = action.payload;
+    },
+    setDrawerOpen: (state, action) => {
+      state.drawerOpen = action.payload;
+    },
+  },
+});
+
+export const { menuOpen, menuType, setDrawerOpen } = customizationSlice.actions;
+export default customizationSlice.reducer;
+
+================================================================================
+File: store.js
+Size: 967 B
+================================================================================
+
+// store/store.js
+import { configureStore } from '@reduxjs/toolkit';
+import reducer from './reducer';
+import { authApi } from './api/authApi';
+import { notificationApi } from './api/notificationApi';
+import { usersApi } from './api/usersApi';
+import { classApi } from './api/classApi';
+import { sectionApi } from './api/sectionApi';
+import { campusApi } from './api/campusApi';
+import { studentApi } from './api/studentApi';
+
+export const store = configureStore({
+    reducer,
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+            serializableCheck: false,
+        }).concat(
+            authApi.middleware,
+            usersApi.middleware,
+            notificationApi.middleware,
+            classApi.middleware,
+            sectionApi.middleware,
+            campusApi.middleware,
+            studentApi.middleware,
+        ),
+    devTools: import.meta.env.MODE !== 'production',
+});
+
+export default store;

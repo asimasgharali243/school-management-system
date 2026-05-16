@@ -1,0 +1,78 @@
+# =====================================================
+# GLOBAL (ALL PROJECTS)
+# =====================================================
+.DS_Store
+*.log
+*.tmp
+
+# Environment files (VERY IMPORTANT)
+.env
+.env.*
+!.env.example
+
+# =====================================================
+# NODE / REACT / REACT NATIVE
+# =====================================================
+node_modules/
+
+# Builds
+dist/
+build/
+web-build/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React Native native folders (if generated)
+android/
+ios/
+*.orig.*
+*.jks
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+
+# =====================================================
+# .NET CORE BACKEND
+# =====================================================
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+.vs/
+*.user
+*.suo
+
+# Visual Studio cache
+*.cache
+
+# =====================================================
+# 🔥 CONFIG / SECRETS (IMPORTANT FOR YOU)
+# =====================================================
+# DO NOT PUSH ANY REAL CONFIG FILES
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# If using user secrets
+secrets.json
+
+# =====================================================
+# DATABASE FILES (if any local DB used)
+# =====================================================
+*.mdf
+*.ldf
+*.sqlite
+*.db
+
+# =====================================================
+# OS FILES
+# =====================================================
+.DS_Store
+Thumbs.db

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1069955558125",
+    "project_id": "schoolmanagementapp-2d09e",
+    "storage_bucket": "schoolmanagementapp-2d09e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1069955558125:android:17e1d805f7ec2b787a7ae4",
+        "android_client_info": {
+          "package_name": "com.asim_ali_786.SchoolManagementApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvV8WRqULTtMQRxl77jsSp3Opfgi8Kq5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,253 @@
+
+================================================================================
+File: AuthenticationRoutes.jsx
+Size: 733 B
+================================================================================
+
+// src/routes/AuthenticationRoutes.js
+import React from 'react';
+import { lazy } from 'react';
+
+// project imports
+import Loadable from 'component/Loadable';
+import MinimalLayout from 'layout/MinimalLayout';
+
+const AuthLogin = Loadable(lazy(() => import('../views/Login')));
+const AuthRegister = Loadable(lazy(() => import('../views/Register')));
+
+// ==============================|| AUTHENTICATION ROUTES ||============================== //
+
+const AuthenticationRoutes = {
+  path: '/',
+  element: <MinimalLayout />,
+  children: [
+    {
+      path: '/application/login',
+      element: <AuthLogin />
+    },
+    {
+      path: '/application/register',
+      element: <AuthRegister />
+    }
+  ]
+};
+
+export default AuthenticationRoutes;
+
+
+================================================================================
+File: index.jsx
+Size: 658 B
+================================================================================
+
+// routes/index.js
+import { useRoutes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { checkTokenExpiry } from '../store/slices/authSlice';
+
+// routes
+import MainRoutes from './MainRoutes';
+import AuthenticationRoutes from './AuthenticationRoutes';
+
+// ==============================|| ROUTING RENDER ||============================== //
+
+export default function ThemeRoutes() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Additional token check when routes change
+    dispatch(checkTokenExpiry());
+  }, [dispatch]);
+
+  return useRoutes([MainRoutes, AuthenticationRoutes]);
+}
+
+
+================================================================================
+File: MainRoutes.jsx
+Size: 3.2 kB
+================================================================================
+
+// src/routes/MainRoutes.js
+import React, { lazy } from 'react';
+import MainLayout from 'layout/MainLayout';
+import Loadable from 'component/Loadable';
+import ProtectedRoute from './ProtectedRoute';
+
+// Lazy load all components
+const DashboardDefault = Loadable(lazy(() => import('views/Dashboard/Default')));
+const UserManagement = Loadable(lazy(() => import('views/Dashboard/UserManagement')));
+
+
+// Notification Management Pages
+const NotificationRulesList = Loadable(lazy(() => import('views/Dashboard/NotificationRules/NotificationRulesList')));
+const NotificationRuleForm = Loadable(lazy(() => import('views/Dashboard/NotificationRules/NotificationRuleForm')));
+const NotificationTemplates = Loadable(lazy(() => import('views/Dashboard/NotificationTemplates/NotificationTemplates')));
+const NotificationHistory = Loadable(lazy(() => import('views/Dashboard/NotificationHistory/NotificationHistory')));
+const NotificationAnalytics = Loadable(lazy(() => import('views/Dashboard/NotificationAnalytics/NotificationAnalytics')));
+const NotificationSettings = Loadable(lazy(() => import('views/Dashboard/NotificationSettings/NotificationSettings')));
+
+const MainRoutes = {
+  path: '/',
+  element: <MainLayout />,
+  children: [
+    {
+      path: '/',
+      element: (
+        <ProtectedRoute requireAuthentication={true}>
+          <DashboardDefault />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/default',
+      element: (
+        <ProtectedRoute requireAuthentication={true}>
+          <DashboardDefault />
+        </ProtectedRoute>
+      )
+    },
+    // Admin-only pages
+    {
+      path: '/dashboard/user-management',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <UserManagement />
+        </ProtectedRoute>
+      )
+    },
+  
+      // Notification Management Routes (Admin Only)
+    {
+      path: '/dashboard/notification-rules',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationRulesList />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-rules/create',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationRuleForm />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-rules/:id',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationRuleForm />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-templates',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationTemplates />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-history',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationHistory />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-analytics',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationAnalytics />
+        </ProtectedRoute>
+      )
+    },
+    {
+      path: '/dashboard/notification-settings',
+      element: (
+        <ProtectedRoute adminOnly={true}>
+          <NotificationSettings />
+        </ProtectedRoute>
+      )
+    },
+  ]
+};
+
+export default MainRoutes;
+
+================================================================================
+File: ProtectedRoute.jsx
+Size: 2.25 kB
+================================================================================
+
+// components/ProtectedRoute.jsx
+import React, { useEffect, useMemo } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { Box, CircularProgress, Typography } from '@mui/material';
+import { jwtDecode } from 'jwt-decode';
+
+const ProtectedRoute = ({ children, adminOnly = false, requireAuthentication = false }) => {
+  const location = useLocation();
+  const { isAuthenticated, token, loading, user } = useSelector((state) => state.auth);
+
+  // Check if user is admin
+  const isAdmin = useMemo(() => {
+    if (!token || !user) return false;
+
+    try {
+      const decoded = jwtDecode(token);
+      const roleName = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ||
+        decoded.role ||
+        user.RoleName;
+
+      const adminRoles = ['Admin', 'Super Admin', 'Administrator', 'admin'];
+      return adminRoles.includes(roleName);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+  }, [token, user]);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" flexDirection="column" gap={2}>
+        <CircularProgress />
+        <Typography variant="h6" color="textSecondary">
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Check authentication
+  if (!isAuthenticated) {
+    console.log('Not authenticated, redirecting to login');
+    return <Navigate to="/application/login" state={{ from: location }} replace />;
+  }
+
+  // Check admin access for admin-only routes
+  if (adminOnly && !isAdmin) {
+    console.log(`Access denied: Admin required for route`);
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" flexDirection="column" gap={2}>
+        <Typography variant="h4" color="error">
+          Access Denied
+        </Typography>
+        <Typography variant="h6" color="textSecondary">
+          This page is only accessible to administrators.
+        </Typography>
+      </Box>
+    );
+  }
+
+  console.log(`Access granted for route`);
+  return children;
+};
+
+export default ProtectedRoute;

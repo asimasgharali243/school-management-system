@@ -1,0 +1,5446 @@
+
+================================================================================
+File: AttendanceReportScreen.js
+Size: 21.54 kB
+================================================================================
+
+// src/screens/Teacher/AttendanceReportScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    ActivityIndicator,
+    Dimensions,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import { fetchAttendanceHistory } from '../../store/slices/teacherSlice';
+
+const { width } = Dimensions.get('window');
+
+const AttendanceReportScreen = ({ navigation, route }) => {
+    const theme = useSelector(selectThemeData);
+    const dispatch = useDispatch();
+    const { classId, className, sectionId, sectionName } = route.params;
+
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [loading, setLoading] = useState(false);
+    const [history, setHistory] = useState([]);
+
+    const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    const years = [2024, 2025, 2026];
+
+    useEffect(() => {
+        loadAttendanceHistory();
+    }, [selectedMonth, selectedYear]);
+
+    const loadAttendanceHistory = async () => {
+        setLoading(true);
+        const result = await dispatch(fetchAttendanceHistory({
+            classId,
+            sectionId,
+            month: selectedMonth,
+            year: selectedYear
+        }));
+
+        if (result.payload?.success) {
+            setHistory(result.payload.history || []);
+        }
+        setLoading(false);
+    };
+
+    const getMonthData = () => {
+        const monthData = Array.from({ length: 31 }, (_, i) => {
+            const day = i + 1;
+            const dateStr = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            const dayData = history.find(h => h.date === dateStr);
+
+            return {
+                day,
+                date: dateStr,
+                present: dayData?.presentCount || 0,
+                total: dayData?.totalStudents || 0,
+                attendance: dayData ? true : false
+            };
+        });
+
+        return monthData;
+    };
+
+    const calculateMonthlyStats = () => {
+        const attendedDays = history.filter(h => h.totalStudents > 0).length;
+        const totalPresent = history.reduce((sum, day) => sum + (day.presentCount || 0), 0);
+        const totalAbsent = history.reduce((sum, day) => sum + (day.absentCount || 0), 0);
+        const totalLeave = history.reduce((sum, day) => sum + (day.leaveCount || 0), 0);
+        const totalStudents = history.length > 0 ? history[0].totalStudents : 0;
+
+        return {
+            attendedDays,
+            totalPresent,
+            totalAbsent,
+            totalLeave,
+            attendancePercentage: attendedDays > 0 ? Math.round((totalPresent / (attendedDays * totalStudents)) * 100) : 0
+        };
+    };
+
+    const stats = calculateMonthlyStats();
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Icon name="arrow-left" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <View style={styles.headerInfo}>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>
+                        {className} - {sectionName}
+                    </Text>
+                    <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+                        Attendance Report
+                    </Text>
+                </View>
+            </View>
+
+            {/* Month/Year Selector */}
+            <View style={[styles.selectorContainer, { backgroundColor: theme.card }]}>
+                <View style={styles.selectorRow}>
+                    <Text style={[styles.selectorLabel, { color: theme.text }]}>Month:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {months.map((month, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[
+                                    styles.selectorButton,
+                                    selectedMonth === index + 1 && { backgroundColor: theme.primary }
+                                ]}
+                                onPress={() => setSelectedMonth(index + 1)}
+                            >
+                                <Text style={[
+                                    styles.selectorButtonText,
+                                    selectedMonth === index + 1 && { color: '#FFFFFF' },
+                                    { color: theme.text }
+                                ]}>
+                                    {month}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+
+                <View style={styles.selectorRow}>
+                    <Text style={[styles.selectorLabel, { color: theme.text }]}>Year:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {years.map((year) => (
+                            <TouchableOpacity
+                                key={year}
+                                style={[
+                                    styles.selectorButton,
+                                    selectedYear === year && { backgroundColor: theme.primary }
+                                ]}
+                                onPress={() => setSelectedYear(year)}
+                            >
+                                <Text style={[
+                                    styles.selectorButtonText,
+                                    selectedYear === year && { color: '#FFFFFF' },
+                                    { color: theme.text }
+                                ]}>
+                                    {year}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            </View>
+
+            {/* Monthly Stats */}
+            <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="calendar-check" size={24} color={theme.primary} />
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {stats.attendedDays}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Days Attended
+                    </Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="chart-line" size={24} color={theme.success} />
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {stats.attendancePercentage}%
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Attendance Rate
+                    </Text>
+                </View>
+            </View>
+
+            <View style={styles.statsGrid}>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="account-check" size={24} color={theme.success} />
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {stats.totalPresent}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Total Present
+                    </Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="account-cancel" size={24} color={theme.error} />
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {stats.totalAbsent}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Total Absent
+                    </Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="calendar-clock" size={24} color={theme.warning} />
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {stats.totalLeave}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Total Leave
+                    </Text>
+                </View>
+            </View>
+
+            {/* Calendar View */}
+            <View style={[styles.calendarContainer, { backgroundColor: theme.card }]}>
+                <Text style={[styles.calendarTitle, { color: theme.text }]}>
+                    Daily Attendance - {months[selectedMonth - 1]} {selectedYear}
+                </Text>
+
+                <View style={styles.weekHeader}>
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                        <Text key={index} style={[styles.weekDay, { color: theme.textSecondary }]}>
+                            {day}
+                        </Text>
+                    ))}
+                </View>
+
+                <View style={styles.calendarGrid}>
+                    {getMonthData().map((dayData, index) => {
+                        const percentage = dayData.total > 0
+                            ? Math.round((dayData.present / dayData.total) * 100)
+                            : 0;
+
+                        let bgColor = theme.background;
+                        if (dayData.attendance) {
+                            if (percentage >= 90) bgColor = theme.success + '40';
+                            else if (percentage >= 75) bgColor = theme.warning + '40';
+                            else bgColor = theme.error + '40';
+                        }
+
+                        return (
+                            <View key={index} style={[styles.dayCell, { backgroundColor: bgColor }]}>
+                                <Text style={[styles.dayNumber, { color: theme.text }]}>
+                                    {dayData.day}
+                                </Text>
+                                {dayData.attendance && (
+                                    <>
+                                        <Text style={[styles.dayPresent, { color: theme.text }]}>
+                                            {dayData.present}
+                                        </Text>
+                                        <Text style={[styles.dayTotal, { color: theme.textSecondary }]}>
+                                            /{dayData.total}
+                                        </Text>
+                                        <Text style={[styles.dayPercentage, { color: theme.textSecondary }]}>
+                                            {percentage}%
+                                        </Text>
+                                    </>
+                                )}
+                            </View>
+                        );
+                    })}
+                </View>
+
+                <View style={styles.legendContainer}>
+                    <View style={styles.legendItem}>
+                        <View style={[styles.legendColor, { backgroundColor: theme.success + '40' }]} />
+                        <Text style={[styles.legendText, { color: theme.textSecondary }]}>
+                            ≥90% Attendance
+                        </Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                        <View style={[styles.legendColor, { backgroundColor: theme.warning + '40' }]} />
+                        <Text style={[styles.legendText, { color: theme.textSecondary }]}>
+                            75-89% Attendance
+                        </Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                        <View style={[styles.legendColor, { backgroundColor: theme.error + '40' }]} />
+                        <Text style={[styles.legendText, { color: theme.textSecondary }]}>
+                            &lt;75% Attendance
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Daily Details */}
+            <View style={[styles.detailsContainer, { backgroundColor: theme.card }]}>
+                <Text style={[styles.detailsTitle, { color: theme.text }]}>
+                    Daily Attendance Details
+                </Text>
+
+                {history.length > 0 ? (
+                    history.map((day, index) => (
+                        <View key={index} style={styles.detailItem}>
+                            <View style={styles.detailDate}>
+                                <Text style={[styles.detailDateText, { color: theme.text }]}>
+                                    {new Date(day.date).toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric'
+                                    })}
+                                </Text>
+                            </View>
+
+                            <View style={styles.detailStats}>
+                                <View style={[styles.detailStat, { backgroundColor: theme.success + '20' }]}>
+                                    <Icon name="check" size={14} color={theme.success} />
+                                    <Text style={[styles.detailStatText, { color: theme.text }]}>
+                                        {day.presentCount}
+                                    </Text>
+                                </View>
+
+                                <View style={[styles.detailStat, { backgroundColor: theme.error + '20' }]}>
+                                    <Icon name="close" size={14} color={theme.error} />
+                                    <Text style={[styles.detailStatText, { color: theme.text }]}>
+                                        {day.absentCount}
+                                    </Text>
+                                </View>
+
+                                <View style={[styles.detailStat, { backgroundColor: theme.warning + '20' }]}>
+                                    <Icon name="clock" size={14} color={theme.warning} />
+                                    <Text style={[styles.detailStatText, { color: theme.text }]}>
+                                        {day.leaveCount}
+                                    </Text>
+                                </View>
+
+                                {day.lateCount > 0 && (
+                                    <View style={[styles.detailStat, { backgroundColor: theme.secondary + '20' }]}>
+                                        <Icon name="clock-alert" size={14} color={theme.secondary} />
+                                        <Text style={[styles.detailStatText, { color: theme.text }]}>
+                                            {day.lateCount}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    ))
+                ) : (
+                    <View style={styles.noDataContainer}>
+                        <Icon name="calendar-remove" size={50} color={theme.textSecondary} />
+                        <Text style={[styles.noDataText, { color: theme.textSecondary }]}>
+                            No attendance data for {months[selectedMonth - 1]} {selectedYear}
+                        </Text>
+                    </View>
+                )}
+            </View>
+        </ScrollView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        marginBottom: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    headerInfo: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    selectorContainer: {
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 15,
+        borderRadius: 10,
+        elevation: 2,
+    },
+    selectorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    selectorLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        width: 50,
+    },
+    selectorButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        marginHorizontal: 3,
+    },
+    selectorButtonText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        marginBottom: 10,
+    },
+    statCard: {
+        flex: 1,
+        marginHorizontal: 5,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginVertical: 5,
+    },
+    statLabel: {
+        fontSize: 11,
+        textAlign: 'center',
+    },
+    calendarContainer: {
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 15,
+        borderRadius: 10,
+        elevation: 2,
+    },
+    calendarTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    weekHeader: {
+        flexDirection: 'row',
+        marginBottom: 5,
+    },
+    weekDay: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    calendarGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    dayCell: {
+        width: (width - 60) / 7,
+        aspectRatio: 1,
+        padding: 2,
+        margin: 1,
+        borderRadius: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dayNumber: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    dayPresent: {
+        fontSize: 9,
+        fontWeight: 'bold',
+    },
+    dayTotal: {
+        fontSize: 8,
+    },
+    dayPercentage: {
+        fontSize: 8,
+        marginTop: 1,
+    },
+    legendContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 15,
+        paddingTop: 15,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(0,0,0,0.1)',
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    legendColor: {
+        width: 12,
+        height: 12,
+        borderRadius: 2,
+        marginRight: 5,
+    },
+    legendText: {
+        fontSize: 9,
+    },
+    detailsContainer: {
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 20,
+        borderRadius: 10,
+        elevation: 2,
+    },
+    detailsTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 15,
+    },
+    detailItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+    },
+    detailDate: {
+        width: 80,
+    },
+    detailDateText: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    detailStats: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    detailStat: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginLeft: 5,
+    },
+    detailStatText: {
+        fontSize: 11,
+        fontWeight: '600',
+        marginLeft: 3,
+    },
+    noDataContainer: {
+        alignItems: 'center',
+        paddingVertical: 30,
+    },
+    noDataText: {
+        fontSize: 14,
+        marginTop: 10,
+        textAlign: 'center',
+    },
+});
+
+export default AttendanceReportScreen;
+
+================================================================================
+File: AttendanceScreen.js
+Size: 16.39 kB
+================================================================================
+
+// src/screens/Teacher/AttendanceScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    FlatList,
+    ActivityIndicator,
+    RefreshControl,
+    Modal,
+    Alert,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import {
+    fetchTeacherClasses,
+    selectTeacherClasses,
+    selectTeacherLoading,
+    clearError,
+    fetchTodayAttendance,
+    markAttendance,
+    updateAttendanceStatus,
+    clearAttendanceData
+} from '../../store/slices/teacherSlice';
+
+const AttendanceScreen = ({ navigation, route }) => {
+    const theme = useSelector(selectThemeData);
+    const dispatch = useDispatch();
+    const classes = useSelector(selectTeacherClasses);
+    const loading = useSelector((state) => state.teacher.loading);
+    const attendanceLoading = useSelector((state) => state.teacher.attendanceLoading);
+
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [showClassModal, setShowClassModal] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Check if class is passed from navigation
+    useEffect(() => {
+        if (route.params?.classId) {
+            const classItem = classes.find(
+                c => c.classId === route.params.classId &&
+                    c.sectionId === route.params.sectionId
+            );
+            if (classItem) {
+                setSelectedClass(classItem);
+                loadAttendance(classItem);
+            }
+        }
+    }, [route.params, classes]);
+
+    useEffect(() => {
+        loadClasses();
+    }, []);
+
+    const loadClasses = async () => {
+        await dispatch(fetchTeacherClasses());
+    };
+
+    const loadAttendance = async (classItem) => {
+        await dispatch(fetchTodayAttendance({
+            classId: classItem.classId,
+            sectionId: classItem.sectionId
+        }));
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (selectedClass) {
+            await loadAttendance(selectedClass);
+        }
+        await loadClasses();
+        setRefreshing(false);
+    };
+
+    const handleClassSelect = (classItem) => {
+        setSelectedClass(classItem);
+        setShowClassModal(false);
+        loadAttendance(classItem);
+    };
+
+    const handleTakeAttendance = () => {
+        if (!selectedClass) {
+            Alert.alert('Select Class', 'Please select a class first');
+            return;
+        }
+        navigation.navigate('MarkAttendance', {
+            classId: selectedClass.classId,
+            className: selectedClass.className,
+            sectionId: selectedClass.sectionId,
+            sectionName: selectedClass.sectionName
+        });
+    };
+
+    const handleViewAttendance = () => {
+        if (!selectedClass) {
+            Alert.alert('Select Class', 'Please select a class first');
+            return;
+        }
+        navigation.navigate('AttendanceReport', {
+            classId: selectedClass.classId,
+            className: selectedClass.className,
+            sectionId: selectedClass.sectionId,
+            sectionName: selectedClass.sectionName
+        });
+    };
+
+    const renderClassItem = ({ item }) => (
+        <TouchableOpacity
+            style={[styles.classItem, { backgroundColor: theme.card }]}
+            onPress={() => handleClassSelect(item)}
+        >
+            <View style={styles.classItemContent}>
+                <View style={[styles.classIcon, { backgroundColor: theme.primary + '20' }]}>
+                    <Icon name="school" size={20} color={theme.primary} />
+                </View>
+                <View style={styles.classItemInfo}>
+                    <Text style={[styles.classItemName, { color: theme.text }]}>
+                        {item.className} - {item.sectionName}
+                    </Text>
+                    <Text style={[styles.classItemSubject, { color: theme.textSecondary }]}>
+                        {item.subjectName || 'Class Incharge'}
+                    </Text>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
+
+    const renderClassModal = () => (
+        <Modal
+            visible={showClassModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowClassModal(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>
+                            Select Class
+                        </Text>
+                        <TouchableOpacity onPress={() => setShowClassModal(false)}>
+                            <Icon name="close" size={24} color={theme.text} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <FlatList
+                        data={classes}
+                        renderItem={renderClassItem}
+                        keyExtractor={(item) => `${item.classId}-${item.sectionId}`}
+                        style={styles.classList}
+                    />
+                </View>
+            </View>
+        </Modal>
+    );
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={[styles.container, { backgroundColor: theme.background }]}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={[theme.primary]}
+                />
+            }
+        >
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <View>
+                    <Text style={[styles.title, { color: theme.text }]}>
+                        Attendance Management
+                    </Text>
+                    <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                        Track and manage student attendance
+                    </Text>
+                </View>
+                <Icon name="calendar-check" size={40} color={theme.primary} />
+            </View>
+
+            {/* Class Selection */}
+            <View style={[styles.section, { backgroundColor: theme.card }]}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Select Class
+                </Text>
+
+                <TouchableOpacity
+                    style={[styles.classSelector, { backgroundColor: theme.background }]}
+                    onPress={() => setShowClassModal(true)}
+                >
+                    {selectedClass ? (
+                        <View style={styles.selectedClass}>
+                            <Text style={[styles.selectedClassName, { color: theme.text }]}>
+                                {selectedClass.className} - {selectedClass.sectionName}
+                            </Text>
+                            <Text style={[styles.selectedClassSubject, { color: theme.textSecondary }]}>
+                                {selectedClass.subjectName}
+                            </Text>
+                        </View>
+                    ) : (
+                        <Text style={[styles.placeholder, { color: theme.textSecondary }]}>
+                            Tap to select class
+                        </Text>
+                    )}
+                    <Icon name="chevron-down" size={24} color={theme.textSecondary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Action Buttons */}
+            {selectedClass && (
+                <View style={styles.actionsContainer}>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.primary }]}
+                        onPress={handleTakeAttendance}
+                        disabled={attendanceLoading}
+                    >
+                        {attendanceLoading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <>
+                                <Icon name="clipboard-check" size={20} color="#FFFFFF" />
+                                <Text style={styles.actionButtonText}>Take Attendance</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.secondary }]}
+                        onPress={handleViewAttendance}
+                    >
+                        <Icon name="chart-bar" size={20} color="#FFFFFF" />
+                        <Text style={styles.actionButtonText}>View Reports</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Today's Summary */}
+            <View style={[styles.section, { backgroundColor: theme.card }]}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Today's Summary ({selectedDate})
+                </Text>
+                <Text style={[styles.summaryText, { color: theme.textSecondary }]}>
+                    {selectedClass
+                        ? `Select class "${selectedClass.className}" to view attendance summary`
+                        : 'Select a class to view attendance summary'
+                    }
+                </Text>
+            </View>
+
+            {/* Classes List */}
+            {!selectedClass && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                        Available Classes
+                    </Text>
+                    {classes.length > 0 ? (
+                        classes.map((classItem) => (
+                            <TouchableOpacity
+                                key={`${classItem.classId}-${classItem.sectionId}`}
+                                style={[styles.classCard, { backgroundColor: theme.card }]}
+                                onPress={() => handleClassSelect(classItem)}
+                            >
+                                <View style={styles.classCardContent}>
+                                    <View style={[styles.cardIcon, { backgroundColor: theme.primary + '20' }]}>
+                                        <Icon name="school" size={24} color={theme.primary} />
+                                    </View>
+                                    <View style={styles.cardInfo}>
+                                        <Text style={[styles.cardClassName, { color: theme.text }]}>
+                                            {classItem.className} - {classItem.sectionName}
+                                        </Text>
+                                        <Text style={[styles.cardSubject, { color: theme.textSecondary }]}>
+                                            {classItem.subjectName}
+                                        </Text>
+                                    </View>
+                                    <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+                                </View>
+                            </TouchableOpacity>
+                        ))
+                    ) : (
+                        <View style={styles.emptyContainer}>
+                            <Icon name="school-outline" size={60} color={theme.textSecondary} />
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                No classes assigned
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {renderClassModal()}
+        </ScrollView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        marginBottom: 10,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
+    subtitle: {
+        fontSize: 14,
+        marginTop: 4,
+    },
+    section: {
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 15,
+        borderRadius: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 10,
+    },
+    classSelector: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 8,
+    },
+    selectedClass: {
+        flex: 1,
+    },
+    selectedClassName: {
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    selectedClassSubject: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    placeholder: {
+        fontSize: 16,
+    },
+    actionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        marginBottom: 15,
+    },
+    actionButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    summaryText: {
+        fontSize: 14,
+        textAlign: 'center',
+        paddingVertical: 10,
+    },
+    classCard: {
+        borderRadius: 8,
+        marginBottom: 10,
+        padding: 12,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    classCardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    cardIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    cardInfo: {
+        flex: 1,
+    },
+    cardClassName: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    cardSubject: {
+        fontSize: 12,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 30,
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    classList: {
+        marginTop: 10,
+    },
+    classItem: {
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    classItemContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    classItemInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    classItemName: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    classItemSubject: {
+        fontSize: 12,
+    },
+});
+
+export default AttendanceScreen;
+
+================================================================================
+File: ClassesScreen.js
+Size: 5.42 kB
+================================================================================
+
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import { fetchTeacherClasses, selectTeacherClasses, selectTeacherLoading } from '../../store/slices/teacherSlice';
+
+const ClassesScreen = ({ navigation }) => {
+    const theme = useSelector(selectThemeData);
+    const dispatch = useDispatch();
+    const classes = useSelector(selectTeacherClasses);
+    const loading = useSelector(selectTeacherLoading);
+
+    useEffect(() => {
+        dispatch(fetchTeacherClasses());
+    }, []);
+
+    // Function to handle class press
+    const handleClassPress = (classItem) => {
+        navigation.navigate('ClassStudents', {
+            classId: classItem.classId,
+            sectionId: classItem.sectionId,
+            className: classItem.className,
+            sectionName: classItem.sectionName,
+            subjectName: classItem.subjectName
+        });
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <Text style={[styles.title, { color: theme.text }]}>
+                    My Classes
+                </Text>
+                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                    Total: {classes.length} classes
+                </Text>
+            </View>
+
+            <View style={styles.classesContainer}>
+                {classes.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Icon name="school-outline" size={60} color={theme.textSecondary} />
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                            No classes assigned yet
+                        </Text>
+                    </View>
+                ) : (
+                    classes.map((classItem) => (
+                        <TouchableOpacity
+                            key={`${classItem.classId}-${classItem.sectionId}`}
+                            style={[styles.classCard, { backgroundColor: theme.card }]}
+                            onPress={() => handleClassPress(classItem)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.classCardContent}>
+                                <View style={[styles.classIcon, { backgroundColor: theme.primary + '20' }]}>
+                                    <Icon name="school" size={24} color={theme.primary} />
+                                </View>
+                                <View style={styles.classInfo}>
+                                    <Text style={[styles.className, { color: theme.text }]}>
+                                        {classItem.className} - {classItem.sectionName}
+                                    </Text>
+                                    <Text style={[styles.subject, { color: theme.textSecondary }]}>
+                                        {classItem.subjectName || 'Class Incharge'}
+                                    </Text>
+                                </View>
+                                <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+                            </View>
+                        </TouchableOpacity>
+                    ))
+                )}
+            </View>
+        </ScrollView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        padding: 20,
+        margin: 15,
+        borderRadius: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
+    subtitle: {
+        fontSize: 14,
+        marginTop: 4,
+    },
+    classesContainer: {
+        paddingHorizontal: 15,
+    },
+    classCard: {
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    classCardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    classIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    classInfo: {
+        flex: 1,
+    },
+    className: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    subject: {
+        fontSize: 12,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
+    },
+});
+
+export default ClassesScreen;
+
+================================================================================
+File: ClassStudentsScreen.js
+Size: 7.05 kB
+================================================================================
+
+import React, { useEffect, useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    ActivityIndicator,
+    RefreshControl,
+    FlatList
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import { fetchClassStudents, selectClassStudents, selectStudentsLoading } from '../../store/slices/teacherSlice';
+
+const ClassStudentsScreen = ({ route, navigation }) => {
+    const theme = useSelector(selectThemeData);
+    const dispatch = useDispatch();
+    const students = useSelector(selectClassStudents);
+    const loading = useSelector(selectStudentsLoading);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Get parameters from navigation
+    const { classId, sectionId, className, sectionName, subjectName } = route.params;
+
+    useEffect(() => {
+        loadStudents();
+    }, [classId, sectionId]);
+
+    const loadStudents = async () => {
+        await dispatch(fetchClassStudents({ classId, sectionId }));
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadStudents();
+        setRefreshing(false);
+    };
+
+    const handleStudentPress = (student) => {
+        navigation.navigate('StudentDetails', {
+            studentId: student.id || student.studentId,
+            studentName: student.name,
+            className,
+            sectionName
+        });
+    };
+
+    const renderStudentItem = ({ item }) => (
+        <TouchableOpacity
+            style={[styles.studentCard, { backgroundColor: theme.card }]}
+            onPress={() => handleStudentPress(item)}
+            activeOpacity={0.7}
+        >
+            <View style={styles.studentCardContent}>
+                <View style={[styles.avatar, { backgroundColor: theme.primary + '20' }]}>
+                    <Icon name="account" size={24} color={theme.primary} />
+                </View>
+                <View style={styles.studentInfo}>
+                    <Text style={[styles.studentName, { color: theme.text }]}>
+                        {item.name || `${item.firstName} ${item.lastName}`}
+                    </Text>
+                    <Text style={[styles.studentId, { color: theme.textSecondary }]}>
+                        Roll No: {item.rollNumber || item.rollNo || 'N/A'}
+                    </Text>
+                    <Text style={[styles.studentEmail, { color: theme.textSecondary }]}>
+                        {item.email || item.parentEmail || 'N/A'}
+                    </Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+            </View>
+        </TouchableOpacity>
+    );
+
+    if (loading && !refreshing) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Class Header */}
+            <View style={[styles.classHeader, { backgroundColor: theme.card }]}>
+                <View style={styles.classHeaderContent}>
+                    <Icon name="school" size={30} color={theme.primary} />
+                    <View style={styles.classInfo}>
+                        <Text style={[styles.classTitle, { color: theme.text }]}>
+                            {className} - {sectionName}
+                        </Text>
+                        <Text style={[styles.classSubject, { color: theme.textSecondary }]}>
+                            {subjectName || 'Class Incharge'}
+                        </Text>
+                        <Text style={[styles.studentCount, { color: theme.textSecondary }]}>
+                            Total Students: {students.length}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Students List */}
+            <FlatList
+                data={students}
+                renderItem={renderStudentItem}
+                keyExtractor={(item) => item.id || item.studentId || Math.random().toString()}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={[theme.primary]}
+                    />
+                }
+                contentContainerStyle={styles.listContainer}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Icon name="account-group-outline" size={60} color={theme.textSecondary} />
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                            No students found
+                        </Text>
+                    </View>
+                }
+            />
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    classHeader: {
+        padding: 20,
+        margin: 15,
+        marginBottom: 10,
+        borderRadius: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    classHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    classInfo: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    classTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    classSubject: {
+        fontSize: 14,
+        marginBottom: 5,
+    },
+    studentCount: {
+        fontSize: 12,
+    },
+    listContainer: {
+        paddingHorizontal: 15,
+        paddingBottom: 20,
+    },
+    studentCard: {
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    studentCardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    studentInfo: {
+        flex: 1,
+    },
+    studentName: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    studentId: {
+        fontSize: 12,
+        marginBottom: 2,
+    },
+    studentEmail: {
+        fontSize: 12,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
+    },
+});
+
+export default ClassStudentsScreen;
+
+================================================================================
+File: components\DiaryCard.js
+Size: 4.34 kB
+================================================================================
+
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+const DiaryCard = ({ entry, theme, onPress }) => {
+    const formatDate = (dateString) => {
+        if (!dateString) return 'No date';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
+    };
+
+    // Strip HTML tags for preview
+    const stripHtml = (html) => {
+        if (!html) return '';
+        return html.replace(/<[^>]*>/g, '').substring(0, 100);
+    };
+
+    return (
+        <TouchableOpacity style={[styles.card, { backgroundColor: theme.card }]} onPress={onPress} activeOpacity={0.7}>
+            <View style={styles.cardHeader}>
+                <View style={styles.classInfo}>
+                    <Icon name="school" size={18} color={theme.primary} />
+                    <Text style={[styles.className, { color: theme.text }]}>{entry.className}</Text>
+                    <Text style={[styles.section, { color: theme.textSecondary }]}>
+                        {entry.sectionNames?.join(', ') || 'N/A'}
+                    </Text>
+                </View>
+                <View style={[styles.dateBadge, { backgroundColor: theme.background }]}>
+                    <Icon name="calendar-today" size={12} color={theme.textSecondary} />
+                    <Text style={[styles.dateText, { color: theme.textSecondary }]}>{formatDate(entry.date)}</Text>
+                </View>
+            </View>
+
+            <View style={styles.subjectContainer}>
+                <Icon name="book" size={16} color={theme.warning} />
+                <Text style={[styles.subjectText, { color: theme.textSecondary }]}>{entry.subjectName}</Text>
+            </View>
+
+            <Text style={[styles.previewText, { color: theme.text }]} numberOfLines={2}>
+                {stripHtml(entry.content) || 'No content'}
+            </Text>
+
+            <View style={styles.cardFooter}>
+                <View style={[styles.statusBadge, { 
+                    backgroundColor: entry.isPublished ? theme.success + '20' : theme.warning + '20' 
+                }]}>
+                    <Text style={[styles.statusText, { 
+                        color: entry.isPublished ? theme.success : theme.warning 
+                    }]}>
+                        {entry.isPublished ? 'Published' : 'Draft'}
+                    </Text>
+                </View>
+                <Icon name="chevron-right" size={20} color={theme.textSecondary} />
+            </View>
+        </TouchableOpacity>
+    );
+};
+
+const styles = StyleSheet.create({
+    card: {
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    classInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        flex: 1,
+    },
+    className: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    section: {
+        fontSize: 12,
+        marginLeft: 4,
+    },
+    dateBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    dateText: {
+        fontSize: 10,
+    },
+    subjectContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 10,
+    },
+    subjectText: {
+        fontSize: 12,
+    },
+    previewText: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 12,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: '600',
+    },
+});
+
+export default DiaryCard;
+
+================================================================================
+File: components\DiaryFilterBar.js
+Size: 15.71 kB
+================================================================================
+
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Modal,
+    FlatList,
+    ScrollView,
+    Platform,
+} from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useSelector } from 'react-redux';
+import { selectThemeData } from '../../../store/slices/themeSlice';
+
+const DiaryFilterBar = ({ filters, setFilters, onApply, onReset, classesData }) => {
+    const theme = useSelector(selectThemeData);
+    const [showFilterModal, setShowFilterModal] = useState(false);
+    const [tempFilters, setTempFilters] = useState(filters);
+    const [showDatePicker, setShowDatePicker] = useState({ from: false, to: false });
+
+    const classes = classesData?.data || [];
+
+    const handleApply = () => {
+        setFilters(tempFilters);
+        onApply(tempFilters);
+        setShowFilterModal(false);
+    };
+
+    const handleReset = () => {
+        const resetFilters = {
+            classId: null,
+            sectionIds: [],
+            subjectId: null,
+            dateFrom: null,
+            dateTo: null,
+        };
+        setTempFilters(resetFilters);
+        setFilters(resetFilters);
+        onApply(resetFilters);
+        setShowFilterModal(false);
+    };
+
+    const toggleSection = (sectionId) => {
+        setTempFilters(prev => ({
+            ...prev,
+            sectionIds: prev.sectionIds.includes(sectionId)
+                ? prev.sectionIds.filter(id => id !== sectionId)
+                : [...prev.sectionIds, sectionId]
+        }));
+    };
+
+    const selectedClass = classes.find(c => c.classId === tempFilters.classId);
+    const sections = selectedClass?.sections || [];
+
+    const FilterModal = () => (
+        <Modal
+            visible={showFilterModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowFilterModal(false)}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>Filter Diaries</Text>
+                        <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                            <Icon name="close" size={24} color={theme.text} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                        {/* Class Filter */}
+                        <View style={styles.filterGroup}>
+                            <Text style={[styles.filterLabel, { color: theme.text }]}>Class</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterChip,
+                                        { backgroundColor: theme.card, borderColor: theme.border },
+                                        !tempFilters.classId && { backgroundColor: theme.primary }
+                                    ]}
+                                    onPress={() => setTempFilters(prev => ({ ...prev, classId: null, sectionIds: [] }))}
+                                >
+                                    <Text style={[
+                                        styles.filterChipText,
+                                        { color: theme.textSecondary },
+                                        !tempFilters.classId && { color: '#FFF' }
+                                    ]}>All Classes</Text>
+                                </TouchableOpacity>
+                                {classes.map((cls) => (
+                                    <TouchableOpacity
+                                        key={cls.classId}
+                                        style={[
+                                            styles.filterChip,
+                                            { backgroundColor: theme.card, borderColor: theme.border },
+                                            tempFilters.classId === cls.classId && { backgroundColor: theme.primary }
+                                        ]}
+                                        onPress={() => setTempFilters(prev => ({ ...prev, classId: cls.classId, sectionIds: [] }))}
+                                    >
+                                        <Text style={[
+                                            styles.filterChipText,
+                                            { color: theme.textSecondary },
+                                            tempFilters.classId === cls.classId && { color: '#FFF' }
+                                        ]}>{cls.className}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        {/* Sections Filter (Multi-select) */}
+                        {tempFilters.classId && sections.length > 0 && (
+                            <View style={styles.filterGroup}>
+                                <Text style={[styles.filterLabel, { color: theme.text }]}>Sections</Text>
+                                <View style={styles.sectionGrid}>
+                                    {sections.map((section) => (
+                                        <TouchableOpacity
+                                            key={section.sectionId}
+                                            style={[
+                                                styles.sectionChip,
+                                                { backgroundColor: theme.card, borderColor: theme.border },
+                                                tempFilters.sectionIds.includes(section.sectionId) && { backgroundColor: theme.primary }
+                                            ]}
+                                            onPress={() => toggleSection(section.sectionId)}
+                                        >
+                                            <Text style={[
+                                                styles.sectionChipText,
+                                                { color: theme.text },
+                                                tempFilters.sectionIds.includes(section.sectionId) && { color: '#FFF' }
+                                            ]}>{section.sectionName}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Date Range */}
+                        <View style={styles.filterGroup}>
+                            <Text style={[styles.filterLabel, { color: theme.text }]}>Date Range</Text>
+                            <View style={styles.dateRow}>
+                                <TouchableOpacity
+                                    style={[styles.dateButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+                                    onPress={() => setShowDatePicker({ from: true, to: false })}
+                                >
+                                    <Icon name="calendar-today" size={18} color={theme.textSecondary} />
+                                    <Text style={[styles.dateText, { color: theme.text }]}>
+                                        {tempFilters.dateFrom ? new Date(tempFilters.dateFrom).toLocaleDateString() : 'From'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <Text style={[styles.dateSeparator, { color: theme.textSecondary }]}>to</Text>
+                                <TouchableOpacity
+                                    style={[styles.dateButton, { backgroundColor: theme.card, borderColor: theme.border }]}
+                                    onPress={() => setShowDatePicker({ from: false, to: true })}
+                                >
+                                    <Icon name="calendar-today" size={18} color={theme.textSecondary} />
+                                    <Text style={[styles.dateText, { color: theme.text }]}>
+                                        {tempFilters.dateTo ? new Date(tempFilters.dateTo).toLocaleDateString() : 'To'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </ScrollView>
+
+                    <View style={[styles.modalFooter, { borderTopColor: theme.border }]}>
+                        <TouchableOpacity style={[styles.resetButton, { borderColor: theme.border }]} onPress={handleReset}>
+                            <Text style={[styles.resetButtonText, { color: theme.text }]}>Reset All</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.applyButton, { backgroundColor: theme.primary }]} onPress={handleApply}>
+                            <Text style={styles.applyButtonText}>Apply Filters</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    return (
+        <>
+            <View style={[styles.filterBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+                <TouchableOpacity style={styles.filterTrigger} onPress={() => setShowFilterModal(true)}>
+                    <Icon name="filter-list" size={20} color={theme.primary} />
+                    <Text style={[styles.filterTriggerText, { color: theme.text }]}>Filter Diaries</Text>
+                </TouchableOpacity>
+                {(filters.classId || filters.sectionIds.length > 0 || filters.dateFrom || filters.dateTo) && (
+                    <View style={styles.activeFilters}>
+                        {filters.classId && (
+                            <View style={[styles.activeFilterChip, { backgroundColor: theme.primary + '20' }]}>
+                                <Text style={[styles.activeFilterText, { color: theme.primary }]}>
+                                    {selectedClass?.className}
+                                </Text>
+                            </View>
+                        )}
+                        {filters.sectionIds.length > 0 && (
+                            <View style={[styles.activeFilterChip, { backgroundColor: theme.primary + '20' }]}>
+                                <Text style={[styles.activeFilterText, { color: theme.primary }]}>
+                                    {filters.sectionIds.length} section(s)
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {showDatePicker.from && (
+                <DateTimePicker
+                    value={tempFilters.dateFrom ? new Date(tempFilters.dateFrom) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, selectedDate) => {
+                        setShowDatePicker({ from: false, to: false });
+                        if (selectedDate) {
+                            setTempFilters(prev => ({ ...prev, dateFrom: selectedDate.toISOString().split('T')[0] }));
+                        }
+                    }}
+                />
+            )}
+
+            {showDatePicker.to && (
+                <DateTimePicker
+                    value={tempFilters.dateTo ? new Date(tempFilters.dateTo) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, selectedDate) => {
+                        setShowDatePicker({ from: false, to: false });
+                        if (selectedDate) {
+                            setTempFilters(prev => ({ ...prev, dateTo: selectedDate.toISOString().split('T')[0] }));
+                        }
+                    }}
+                />
+            )}
+
+            {FilterModal()}
+        </>
+    );
+};
+
+const styles = StyleSheet.create({
+    filterBar: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    filterTrigger: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    filterTriggerText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    activeFilters: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+        gap: 8,
+    },
+    activeFilterChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 16,
+    },
+    activeFilterText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    modalBody: {
+        padding: 20,
+    },
+    filterGroup: {
+        marginBottom: 24,
+    },
+    filterLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 12,
+    },
+    filterChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginRight: 8,
+        borderWidth: 1,
+    },
+    filterChipText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    sectionGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    sectionChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    sectionChipText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    dateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    dateButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        gap: 8,
+    },
+    dateText: {
+        fontSize: 13,
+    },
+    dateSeparator: {
+        fontSize: 14,
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        padding: 16,
+        borderTopWidth: 1,
+        gap: 12,
+    },
+    resetButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+    },
+    resetButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    applyButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    applyButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+});
+
+export default DiaryFilterBar;
+
+================================================================================
+File: GradesScreen.js
+Size: 20.79 kB
+================================================================================
+
+// src/screens/Teacher/GradesScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    FlatList,
+    TextInput,
+    ActivityIndicator,
+    RefreshControl,
+    Modal,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+
+const GradesScreen = ({ navigation }) => {
+    const theme = useSelector(selectThemeData);
+
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [classes, setClasses] = useState([]);
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [selectedSubject, setSelectedSubject] = useState(null);
+    const [showClassModal, setShowClassModal] = useState(false);
+    const [showSubjectModal, setShowSubjectModal] = useState(false);
+    const [gradesData, setGradesData] = useState([]);
+    const [newGrade, setNewGrade] = useState({
+        subject: '',
+        examType: '',
+        totalMarks: '',
+        obtainedMarks: '',
+        grade: '',
+        remarks: '',
+    });
+
+    useEffect(() => {
+        fetchGradesData();
+    }, []);
+
+    const fetchGradesData = async () => {
+        setLoading(true);
+        // Mock data - replace with API
+        setTimeout(() => {
+            setClasses([
+                { id: 1, name: 'Class 5A', subject: 'Mathematics' },
+                { id: 2, name: 'Class 6B', subject: 'Science' },
+                { id: 3, name: 'Class 7C', subject: 'English' },
+            ]);
+
+            setGradesData([
+                { id: 1, studentName: 'John Doe', rollNo: '101', grade: 'A', marks: '95/100' },
+                { id: 2, studentName: 'Jane Smith', rollNo: '102', grade: 'A-', marks: '88/100' },
+                { id: 3, studentName: 'Robert Johnson', rollNo: '103', grade: 'B+', marks: '85/100' },
+                { id: 4, studentName: 'Emily Davis', rollNo: '104', grade: 'B', marks: '82/100' },
+                { id: 5, studentName: 'Michael Wilson', rollNo: '105', grade: 'A', marks: '92/100' },
+            ]);
+
+            setSelectedClass({ id: 1, name: 'Class 5A', subject: 'Mathematics' });
+            setSelectedSubject('Mathematics');
+            setLoading(false);
+        }, 1000);
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchGradesData();
+        setRefreshing(false);
+    };
+
+    const handleClassSelect = (classItem) => {
+        setSelectedClass(classItem);
+        setSelectedSubject(classItem.subject);
+        setShowClassModal(false);
+        // Fetch grades for selected class
+    };
+
+    const handleSubjectSelect = (subject) => {
+        setSelectedSubject(subject);
+        setShowSubjectModal(false);
+        // Fetch grades for selected subject
+    };
+
+    const handleAddGrade = () => {
+        // Navigate to add grade screen or show modal
+        console.log('Add new grade');
+    };
+
+    const handleEditGrade = (student) => {
+        // Navigate to edit grade screen
+        console.log('Edit grade for:', student.studentName);
+    };
+
+    const handleViewReport = () => {
+        // Navigate to grade report screen
+        console.log('View grade report');
+    };
+
+    const renderGradeItem = ({ item }) => (
+        <View style={[styles.gradeCard, { backgroundColor: theme.card }]}>
+            <View style={styles.studentInfo}>
+                <Text style={[styles.studentName, { color: theme.text }]}>
+                    {item.studentName}
+                </Text>
+                <Text style={[styles.rollNo, { color: theme.textSecondary }]}>
+                    Roll No: {item.rollNo}
+                </Text>
+            </View>
+
+            <View style={styles.gradeInfo}>
+                <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(item.grade, theme) }]}>
+                    <Text style={styles.gradeText}>{item.grade}</Text>
+                </View>
+                <Text style={[styles.marks, { color: theme.textSecondary }]}>
+                    {item.marks}
+                </Text>
+            </View>
+
+            <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditGrade(item)}
+            >
+                <Icon name="pencil" size={20} color={theme.primary} />
+            </TouchableOpacity>
+        </View>
+    );
+
+    const getGradeColor = (grade, theme) => {
+        const gradeColors = {
+            'A+': theme.success,
+            'A': theme.success,
+            'A-': '#4CAF50',
+            'B+': '#8BC34A',
+            'B': theme.warning,
+            'B-': '#FF9800',
+            'C+': '#FF9800',
+            'C': theme.error,
+            'D': '#F44336',
+            'F': '#D32F2F',
+        };
+        return gradeColors[grade] || theme.primary;
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={[styles.container, { backgroundColor: theme.background }]}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={[theme.primary]}
+                />
+            }
+        >
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <View>
+                    <Text style={[styles.title, { color: theme.text }]}>
+                        Grades Management
+                    </Text>
+                    <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+                        Enter and manage student grades
+                    </Text>
+                </View>
+                <Icon name="school" size={40} color={theme.primary} />
+            </View>
+
+            {/* Filters */}
+            <View style={styles.filtersContainer}>
+                <TouchableOpacity
+                    style={[styles.filterButton, { backgroundColor: theme.card }]}
+                    onPress={() => setShowClassModal(true)}
+                >
+                    <Icon name="school" size={20} color={theme.primary} style={styles.filterIcon} />
+                    <Text style={[styles.filterText, { color: theme.text }]}>
+                        {selectedClass?.name || 'Select Class'}
+                    </Text>
+                    <Icon name="chevron-down" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.filterButton, { backgroundColor: theme.card }]}
+                    onPress={() => setShowSubjectModal(true)}
+                >
+                    <Icon name="book" size={20} color={theme.primary} style={styles.filterIcon} />
+                    <Text style={[styles.filterText, { color: theme.text }]}>
+                        {selectedSubject || 'Select Subject'}
+                    </Text>
+                    <Icon name="chevron-down" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Stats */}
+            <View style={[styles.statsCard, { backgroundColor: theme.card }]}>
+                <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {gradesData.length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Students
+                    </Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.success }]}>
+                        {gradesData.filter(g => g.grade === 'A' || g.grade === 'A+').length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        A Grades
+                    </Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.text }]}>
+                        {calculateAverageGrade(gradesData)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Avg Grade
+                    </Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Text style={[styles.statValue, { color: theme.warning }]}>
+                        85%
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Pass Rate
+                    </Text>
+                </View>
+            </View>
+
+            {/* Actions */}
+            <View style={styles.actionsContainer}>
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: theme.primary }]}
+                    onPress={handleAddGrade}
+                >
+                    <Icon name="plus" size={20} color="#FFFFFF" />
+                    <Text style={styles.actionButtonText}>Add Grades</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }]}
+                    onPress={handleViewReport}
+                >
+                    <Icon name="chart-bar" size={20} color={theme.text} />
+                    <Text style={[styles.actionButtonText, { color: theme.text }]}>
+                        View Report
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Grades List */}
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                        Student Grades
+                    </Text>
+                    <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
+                        {selectedClass?.name} • {selectedSubject}
+                    </Text>
+                </View>
+
+                <FlatList
+                    data={gradesData}
+                    renderItem={renderGradeItem}
+                    keyExtractor={(item) => item.id.toString()}
+                    scrollEnabled={false}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Icon name="clipboard-text" size={60} color={theme.textSecondary} />
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                No grades entered yet
+                            </Text>
+                            <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>
+                                Add grades using the button above
+                            </Text>
+                        </View>
+                    }
+                />
+            </View>
+
+            {/* Class Selection Modal */}
+            <Modal
+                visible={showClassModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowClassModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>
+                                Select Class
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowClassModal(false)}>
+                                <Icon name="close" size={24} color={theme.text} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <FlatList
+                            data={classes}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.modalItem,
+                                        selectedClass?.id === item.id && { backgroundColor: theme.primary + '20' },
+                                    ]}
+                                    onPress={() => handleClassSelect(item)}
+                                >
+                                    <Icon name="school" size={20} color={theme.primary} />
+                                    <Text style={[styles.modalItemText, { color: theme.text }]}>
+                                        {item.name} - {item.subject}
+                                    </Text>
+                                    {selectedClass?.id === item.id && (
+                                        <Icon name="check" size={20} color={theme.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                            keyExtractor={(item) => item.id.toString()}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Subject Selection Modal */}
+            <Modal
+                visible={showSubjectModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowSubjectModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: theme.text }]}>
+                                Select Subject
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowSubjectModal(false)}>
+                                <Icon name="close" size={24} color={theme.text} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry'].map((subject) => (
+                            <TouchableOpacity
+                                key={subject}
+                                style={[
+                                    styles.modalItem,
+                                    selectedSubject === subject && { backgroundColor: theme.primary + '20' },
+                                ]}
+                                onPress={() => handleSubjectSelect(subject)}
+                            >
+                                <Icon name="book" size={20} color={theme.primary} />
+                                <Text style={[styles.modalItemText, { color: theme.text }]}>
+                                    {subject}
+                                </Text>
+                                {selectedSubject === subject && (
+                                    <Icon name="check" size={20} color={theme.primary} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            </Modal>
+        </ScrollView>
+    );
+};
+
+const calculateAverageGrade = (grades) => {
+    const gradeValues = {
+        'A+': 4.0, 'A': 4.0, 'A-': 3.7,
+        'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+        'C+': 2.3, 'C': 2.0, 'D': 1.0, 'F': 0.0,
+    };
+
+    const total = grades.reduce((sum, grade) => {
+        return sum + (gradeValues[grade.grade] || 0);
+    }, 0);
+
+    return (total / grades.length).toFixed(1) || '0.0';
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        marginBottom: 10,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
+    subtitle: {
+        fontSize: 14,
+        marginTop: 4,
+    },
+    filtersContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        marginBottom: 15,
+    },
+    filterButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    filterIcon: {
+        marginRight: 8,
+    },
+    filterText: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    statsCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginHorizontal: 15,
+        marginBottom: 20,
+        padding: 20,
+        borderRadius: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    statItem: {
+        alignItems: 'center',
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    statLabel: {
+        fontSize: 12,
+    },
+    actionsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        marginBottom: 20,
+    },
+    actionButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        paddingVertical: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+    section: {
+        paddingHorizontal: 15,
+        marginBottom: 20,
+    },
+    sectionHeader: {
+        marginBottom: 15,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    sectionSubtitle: {
+        fontSize: 14,
+        marginTop: 2,
+    },
+    gradeCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    studentInfo: {
+        flex: 1,
+    },
+    studentName: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    rollNo: {
+        fontSize: 12,
+    },
+    gradeInfo: {
+        alignItems: 'center',
+        marginHorizontal: 15,
+    },
+    gradeBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        marginBottom: 5,
+    },
+    gradeText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+    },
+    marks: {
+        fontSize: 12,
+    },
+    editButton: {
+        padding: 5,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginTop: 15,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        marginTop: 5,
+        textAlign: 'center',
+        paddingHorizontal: 40,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        maxHeight: '70%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    modalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 5,
+    },
+    modalItemText: {
+        flex: 1,
+        fontSize: 16,
+        marginLeft: 10,
+    },
+});
+
+export default GradesScreen;
+
+================================================================================
+File: MarkAttendanceScreen.js
+Size: 26.19 kB
+================================================================================
+
+// src/screens/Teacher/MarkAttendanceScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    TextInput,
+    Alert,
+    ActivityIndicator,
+    Modal,
+    FlatList,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import {
+    fetchClassStudents,
+    fetchTodayAttendance,
+    markAttendance,
+    updateAttendanceStatus,
+    selectTeacherStudents,
+    selectTeacherAttendance,
+    selectTeacherTodayAttendance,
+    clearAttendanceData
+} from '../../store/slices/teacherSlice';
+
+const MarkAttendanceScreen = ({ navigation, route }) => {
+    const theme = useSelector(selectThemeData);
+    const dispatch = useDispatch();
+    const { classId, className, sectionId, sectionName } = route.params;
+
+    const students = useSelector(selectTeacherStudents);
+    const attendance = useSelector((state) => state.teacher.attendance);
+    const todayAttendance = useSelector(selectTeacherTodayAttendance);
+    const loading = useSelector((state) => state.teacher.loading);
+    const attendanceLoading = useSelector((state) => state.teacher.attendanceLoading);
+
+    const [remarks, setRemarks] = useState('');
+    const [showRemarksModal, setShowRemarksModal] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [lateModal, setLateModal] = useState(false);
+    const [leaveModal, setLeaveModal] = useState(false);
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        await Promise.all([
+            dispatch(fetchClassStudents({ classId, sectionId })),
+            dispatch(fetchTodayAttendance({ classId, sectionId }))
+        ]);
+    };
+
+    const getStudentAttendance = (studentId) => {
+        const attendanceRecord = attendance.find(a => a.studentId === studentId);
+        if (attendanceRecord) {
+            return {
+                status: attendanceRecord.status,
+                lateStatus: attendanceRecord.lateStatus,
+                remarks: attendanceRecord.remarks
+            };
+        }
+
+        // If today's attendance already exists, use that
+        if (todayAttendance?.attendanceTaken && todayAttendance?.attendanceRecords) {
+            const todayRecord = todayAttendance.attendanceRecords.find(r => r.studentId === studentId);
+            if (todayRecord) {
+                return {
+                    status: todayRecord.status,
+                    lateStatus: todayRecord.lateStatus,
+                    remarks: todayRecord.remarks
+                };
+            }
+        }
+
+        // Default to present
+        return {
+            status: 'P',
+            lateStatus: 'OnTime',
+            remarks: ''
+        };
+    };
+
+    const handleStatusChange = (studentId, newStatus) => {
+        const currentAttendance = getStudentAttendance(studentId);
+
+        switch (newStatus) {
+            case 'P':
+                setSelectedStudent(studentId);
+                setLateModal(true);
+                break;
+            case 'A':
+                dispatch(updateAttendanceStatus({
+                    studentId,
+                    status: 'A',
+                    lateStatus: '',
+                    remarks: 'Absent'
+                }));
+                break;
+            case 'L':
+                setSelectedStudent(studentId);
+                setLeaveModal(true);
+                break;
+        }
+    };
+
+    const handleLateSelect = (isLate) => {
+        if (selectedStudent) {
+            dispatch(updateAttendanceStatus({
+                studentId: selectedStudent,
+                status: 'P',
+                lateStatus: isLate ? 'Late' : 'OnTime',
+                remarks: isLate ? 'Late arrival' : ''
+            }));
+            setLateModal(false);
+        }
+    };
+
+    const handleLeaveConfirm = (leaveRemarks) => {
+        if (selectedStudent) {
+            dispatch(updateAttendanceStatus({
+                studentId: selectedStudent,
+                status: 'L',
+                lateStatus: '',
+                remarks: leaveRemarks || 'Leave'
+            }));
+            setLeaveModal(false);
+            setSelectedStudent(null);
+        }
+    };
+
+    const handleSaveAttendance = async () => {
+        if (students.length === 0) {
+            Alert.alert('No Students', 'No students found in this class');
+            return;
+        }
+
+        // Prepare attendance records
+        const attendanceRecords = students.map(student => {
+            const studentAttendance = getStudentAttendance(student.studentId);
+            return {
+                studentId: student.studentId,
+                status: studentAttendance.status,
+                lateStatus: studentAttendance.lateStatus,
+                remarks: studentAttendance.remarks
+            };
+        });
+
+        const attendanceData = {
+            classId,
+            sectionId,
+            attendanceRecords,
+            remarks
+        };
+
+        const result = await dispatch(markAttendance(attendanceData));
+
+        if (result.payload?.success) {
+            Alert.alert(
+                'Success',
+                `Attendance saved successfully for ${students.length} students`,
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => navigation.goBack()
+                    }
+                ]
+            );
+        } else {
+            Alert.alert('Error', result.payload?.message || 'Failed to save attendance');
+        }
+    };
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'P': return theme.success;
+            case 'A': return theme.error;
+            case 'L': return theme.warning;
+            default: return theme.textSecondary;
+        }
+    };
+
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'P': return 'check-circle';
+            case 'A': return 'close-circle';
+            case 'L': return 'calendar-clock';
+            default: return 'circle-outline';
+        }
+    };
+
+    const renderStudentItem = ({ item }) => {
+        const attendance = getStudentAttendance(item.studentId);
+
+        return (
+            <View style={[styles.studentCard, { backgroundColor: theme.card }]}>
+                <View style={styles.studentInfo}>
+                    <View style={[styles.avatar, { backgroundColor: theme.primary + '20' }]}>
+                        <Text style={[styles.avatarText, { color: theme.primary }]}>
+                            {item.name.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
+                    <View style={styles.studentDetails}>
+                        <Text style={[styles.studentName, { color: theme.text }]}>
+                            {item.name}
+                        </Text>
+                        <Text style={[styles.studentRollNo, { color: theme.textSecondary }]}>
+                            Roll No: {item.rollNo}
+                        </Text>
+                        {attendance.remarks && (
+                            <Text style={[styles.remarks, { color: theme.textSecondary }]}>
+                                {attendance.remarks}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+
+                <View style={styles.statusContainer}>
+                    {/* Present Button */}
+                    <TouchableOpacity
+                        style={[
+                            styles.statusButton,
+                            attendance.status === 'P' && { backgroundColor: theme.success + '20' },
+                            { borderColor: attendance.status === 'P' ? theme.success : theme.border }
+                        ]}
+                        onPress={() => handleStatusChange(item.studentId, 'P')}
+                    >
+                        <Icon
+                            name={attendance.status === 'P' ? 'check-circle' : 'circle-outline'}
+                            size={20}
+                            color={attendance.status === 'P' ? theme.success : theme.textSecondary}
+                        />
+                        <Text style={[
+                            styles.statusText,
+                            { color: attendance.status === 'P' ? theme.success : theme.textSecondary }
+                        ]}>
+                            P
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Absent Button */}
+                    <TouchableOpacity
+                        style={[
+                            styles.statusButton,
+                            attendance.status === 'A' && { backgroundColor: theme.error + '20' },
+                            { borderColor: attendance.status === 'A' ? theme.error : theme.border }
+                        ]}
+                        onPress={() => handleStatusChange(item.studentId, 'A')}
+                    >
+                        <Icon
+                            name={attendance.status === 'A' ? 'close-circle' : 'circle-outline'}
+                            size={20}
+                            color={attendance.status === 'A' ? theme.error : theme.textSecondary}
+                        />
+                        <Text style={[
+                            styles.statusText,
+                            { color: attendance.status === 'A' ? theme.error : theme.textSecondary }
+                        ]}>
+                            A
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Leave Button */}
+                    <TouchableOpacity
+                        style={[
+                            styles.statusButton,
+                            attendance.status === 'L' && { backgroundColor: theme.warning + '20' },
+                            { borderColor: attendance.status === 'L' ? theme.warning : theme.border }
+                        ]}
+                        onPress={() => handleStatusChange(item.studentId, 'L')}
+                    >
+                        <Icon
+                            name={attendance.status === 'L' ? 'calendar-clock' : 'calendar'}
+                            size={20}
+                            color={attendance.status === 'L' ? theme.warning : theme.textSecondary}
+                        />
+                        <Text style={[
+                            styles.statusText,
+                            { color: attendance.status === 'L' ? theme.warning : theme.textSecondary }
+                        ]}>
+                            L
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Remarks Button */}
+                    <TouchableOpacity
+                        style={[styles.remarksButton, { borderColor: theme.border }]}
+                        onPress={() => {
+                            setSelectedStudent(item.studentId);
+                            setShowRemarksModal(true);
+                        }}
+                    >
+                        <Icon name="note-text" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <View style={styles.headerContent}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Icon name="arrow-left" size={24} color={theme.text} />
+                    </TouchableOpacity>
+                    <View style={styles.headerInfo}>
+                        <Text style={[styles.headerTitle, { color: theme.text }]}>
+                            {className} - {sectionName}
+                        </Text>
+                        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
+                            {students.length} students • {new Date().toLocaleDateString()}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Stats */}
+            <View style={styles.statsContainer}>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        {students.filter(s => getStudentAttendance(s.studentId).status === 'P').length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Present</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        {students.filter(s => getStudentAttendance(s.studentId).status === 'A').length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Absent</Text>
+                </View>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        {students.filter(s => getStudentAttendance(s.studentId).status === 'L').length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Leave</Text>
+                </View>
+            </View>
+
+            {/* Students List */}
+            <FlatList
+                data={students}
+                renderItem={renderStudentItem}
+                keyExtractor={(item) => item.studentId.toString()}
+                contentContainerStyle={styles.listContainer}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Icon name="account-group" size={60} color={theme.textSecondary} />
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                            No students found
+                        </Text>
+                    </View>
+                }
+            />
+
+            {/* Action Bar */}
+            <View style={[styles.actionBar, { backgroundColor: theme.card }]}>
+                <TextInput
+                    style={[styles.remarksInput, {
+                        backgroundColor: theme.background,
+                        color: theme.text,
+                        borderColor: theme.border
+                    }]}
+                    placeholder="General remarks..."
+                    placeholderTextColor={theme.textSecondary}
+                    value={remarks}
+                    onChangeText={setRemarks}
+                />
+                <TouchableOpacity
+                    style={[styles.saveButton, { backgroundColor: theme.primary }]}
+                    onPress={handleSaveAttendance}
+                    disabled={attendanceLoading}
+                >
+                    {attendanceLoading ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                        <>
+                            <Icon name="check" size={20} color="#FFFFFF" />
+                            <Text style={styles.saveButtonText}>Save Attendance</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+            </View>
+
+            {/* Late Modal */}
+            <Modal
+                visible={lateModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setLateModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>
+                            Mark as Present
+                        </Text>
+                        <Text style={[styles.modalText, { color: theme.textSecondary }]}>
+                            Is the student late?
+                        </Text>
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: theme.success }]}
+                                onPress={() => handleLateSelect(false)}
+                            >
+                                <Icon name="clock-check" size={20} color="#FFFFFF" />
+                                <Text style={styles.modalButtonText}>On Time</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: theme.warning }]}
+                                onPress={() => handleLateSelect(true)}
+                            >
+                                <Icon name="clock-alert" size={20} color="#FFFFFF" />
+                                <Text style={styles.modalButtonText}>Late</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.modalCancel, { borderColor: theme.border }]}
+                            onPress={() => setLateModal(false)}
+                        >
+                            <Text style={[styles.modalCancelText, { color: theme.text }]}>
+                                Cancel
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Leave Modal */}
+            <Modal
+                visible={leaveModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setLeaveModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>
+                            Mark as Leave
+                        </Text>
+
+                        <TextInput
+                            style={[styles.leaveInput, {
+                                backgroundColor: theme.background,
+                                color: theme.text,
+                                borderColor: theme.border
+                            }]}
+                            placeholder="Enter leave reason..."
+                            placeholderTextColor={theme.textSecondary}
+                            multiline
+                            numberOfLines={3}
+                            onChangeText={(text) => setSelectedStudent(prev => ({ ...prev, leaveReason: text }))}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, { backgroundColor: theme.success }]}
+                                onPress={() => handleLeaveConfirm(selectedStudent?.leaveReason)}
+                            >
+                                <Icon name="check" size={20} color="#FFFFFF" />
+                                <Text style={styles.modalButtonText}>Confirm</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalCancel, { borderColor: theme.border }]}
+                                onPress={() => setLeaveModal(false)}
+                            >
+                                <Text style={[styles.modalCancelText, { color: theme.text }]}>
+                                    Cancel
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        paddingHorizontal: 15,
+        paddingVertical: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerInfo: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    headerSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+    },
+    statCard: {
+        flex: 1,
+        marginHorizontal: 5,
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    statNumber: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    statLabel: {
+        fontSize: 12,
+    },
+    listContainer: {
+        padding: 15,
+        paddingBottom: 80, // Space for action bar
+    },
+    studentCard: {
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    studentInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    studentDetails: {
+        flex: 1,
+    },
+    studentName: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    studentRollNo: {
+        fontSize: 12,
+    },
+    remarks: {
+        fontSize: 11,
+        marginTop: 2,
+        fontStyle: 'italic',
+    },
+    statusContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    statusButton: {
+        flex: 1,
+        marginHorizontal: 2,
+        paddingVertical: 8,
+        borderRadius: 6,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 4,
+    },
+    remarksButton: {
+        padding: 8,
+        borderRadius: 6,
+        borderWidth: 1,
+        marginLeft: 5,
+    },
+    actionBar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        padding: 15,
+        borderTopWidth: 1,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    remarksInput: {
+        flex: 1,
+        padding: 10,
+        borderRadius: 6,
+        borderWidth: 1,
+        marginRight: 10,
+        fontSize: 14,
+    },
+    saveButton: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 6,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    saveButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+        fontSize: 14,
+        marginLeft: 5,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '80%',
+        borderRadius: 12,
+        padding: 20,
+        elevation: 5,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    modalText: {
+        fontSize: 14,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    leaveInput: {
+        borderWidth: 1,
+        borderRadius: 6,
+        padding: 10,
+        marginBottom: 20,
+        textAlignVertical: 'top',
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    modalButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        paddingVertical: 12,
+        borderRadius: 6,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '600',
+        marginLeft: 5,
+    },
+    modalCancel: {
+        flex: 1,
+        marginHorizontal: 5,
+        paddingVertical: 12,
+        borderRadius: 6,
+        borderWidth: 1,
+        alignItems: 'center',
+    },
+    modalCancelText: {
+        fontWeight: '600',
+    },
+});
+
+export default MarkAttendanceScreen;
+
+================================================================================
+File: StudentDetailsScreen.js
+Size: 19.23 kB
+================================================================================
+
+// src/screens/Teacher/StudentDetailsScreen.js
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Image,
+    ActivityIndicator,
+    RefreshControl,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+
+const StudentDetailsScreen = ({ route, navigation }) => {
+    const theme = useSelector(selectThemeData);
+    const { studentId, studentName, studentData } = route.params;
+
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [student, setStudent] = useState(studentData || {});
+    const [attendanceData, setAttendanceData] = useState([]);
+    const [gradesData, setGradesData] = useState([]);
+    const [recentActivities, setRecentActivities] = useState([]);
+
+    useEffect(() => {
+        fetchStudentDetails();
+    }, []);
+
+    const fetchStudentDetails = async () => {
+        setLoading(true);
+        // Mock data - replace with API
+        setTimeout(() => {
+            setStudent({
+                ...studentData,
+                fatherName: 'John Doe Sr.',
+                motherName: 'Jane Doe',
+                phone: '+1 234 567 8900',
+                email: 'john.doe@example.com',
+                address: '123 Main St, City, Country',
+                dob: '2015-08-15',
+                joinedDate: '2023-01-10',
+                bloodGroup: 'O+',
+                allergies: 'None',
+            });
+
+            setAttendanceData([
+                { month: 'Jan', present: 22, total: 25 },
+                { month: 'Feb', present: 20, total: 22 },
+                { month: 'Mar', present: 23, total: 24 },
+                { month: 'Apr', present: 21, total: 23 },
+            ]);
+
+            setGradesData([
+                { subject: 'Mathematics', grade: 'A', marks: '95/100' },
+                { subject: 'Science', grade: 'A-', marks: '88/100' },
+                { subject: 'English', grade: 'B+', marks: '85/100' },
+                { subject: 'History', grade: 'A', marks: '92/100' },
+                { subject: 'Geography', grade: 'B+', marks: '87/100' },
+            ]);
+
+            setRecentActivities([
+                { id: 1, activity: 'Won Science Fair', date: '2024-03-15' },
+                { id: 2, activity: 'Perfect Attendance - March', date: '2024-04-01' },
+                { id: 3, activity: 'Math Quiz Winner', date: '2024-03-10' },
+            ]);
+
+            setLoading(false);
+        }, 1500);
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchStudentDetails();
+        setRefreshing(false);
+    };
+
+    const handleTakeAttendance = () => {
+        // Navigate to attendance marking screen
+        console.log('Mark attendance for:', studentName);
+    };
+
+    const handleEnterGrades = () => {
+        // Navigate to grade entry screen
+        console.log('Enter grades for:', studentName);
+    };
+
+    const handleSendMessage = () => {
+        // Navigate to messaging screen
+        console.log('Message parent of:', studentName);
+    };
+
+    if (loading) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={[styles.container, { backgroundColor: theme.background }]}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={[theme.primary]}
+                />
+            }
+        >
+            {/* Profile Header */}
+            <View style={[styles.profileHeader, { backgroundColor: theme.card }]}>
+                <View style={styles.avatarContainer}>
+                    {student.image ? (
+                        <Image source={{ uri: student.image }} style={styles.avatar} />
+                    ) : (
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.primary }]}>
+                            <Icon name="account" size={50} color="#FFFFFF" />
+                        </View>
+                    )}
+                </View>
+                <View style={styles.profileInfo}>
+                    <Text style={[styles.studentName, { color: theme.text }]}>
+                        {studentName}
+                    </Text>
+                    <Text style={[styles.classInfo, { color: theme.textSecondary }]}>
+                        Roll No: {student.rollNo || 'N/A'} • Class: {student.className || 'N/A'}
+                    </Text>
+                    <View style={styles.stats}>
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statValue, { color: theme.text }]}>95%</Text>
+                            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Attendance</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statValue, { color: theme.text }]}>A-</Text>
+                            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Avg Grade</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                            <Text style={[styles.statValue, { color: theme.text }]}>4.5</Text>
+                            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>GPA</Text>
+                        </View>
+                    </View>
+                </View>
+            </View>
+
+            {/* Quick Actions */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
+                <View style={styles.quickActions}>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={handleTakeAttendance}
+                    >
+                        <Icon name="clipboard-check" size={24} color={theme.primary} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            Attendance
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={handleEnterGrades}
+                    >
+                        <Icon name="pen" size={24} color={theme.success} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            Enter Grades
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={handleSendMessage}
+                    >
+                        <Icon name="message" size={24} color={theme.warning} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            Message Parent
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={() => { }}
+                    >
+                        <Icon name="note" size={24} color={theme.error} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            Add Note
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Personal Information */}
+            <View style={[styles.section, { backgroundColor: theme.card }]}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Personal Information
+                </Text>
+                <View style={styles.infoGrid}>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Father's Name
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.fatherName || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Mother's Name
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.motherName || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Phone
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.phone || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Email
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.email || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Date of Birth
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.dob || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.infoItem}>
+                        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>
+                            Blood Group
+                        </Text>
+                        <Text style={[styles.infoValue, { color: theme.text }]}>
+                            {student.bloodGroup || 'N/A'}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Attendance History */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Attendance History
+                </Text>
+                {attendanceData.map((item, index) => (
+                    <View
+                        key={index}
+                        style={[styles.attendanceItem, { backgroundColor: theme.card }]}
+                    >
+                        <Text style={[styles.month, { color: theme.text }]}>{item.month}</Text>
+                        <View style={styles.attendanceBar}>
+                            <View
+                                style={[
+                                    styles.attendanceFill,
+                                    {
+                                        width: `${(item.present / item.total) * 100}%`,
+                                        backgroundColor: theme.success,
+                                    },
+                                ]}
+                            />
+                        </View>
+                        <Text style={[styles.attendanceText, { color: theme.text }]}>
+                            {item.present}/{item.total} ({Math.round((item.present / item.total) * 100)}%)
+                        </Text>
+                    </View>
+                ))}
+            </View>
+
+            {/* Recent Grades */}
+            <View style={[styles.section, { backgroundColor: theme.card }]}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Recent Grades
+                </Text>
+                {gradesData.map((grade, index) => (
+                    <View
+                        key={index}
+                        style={[
+                            styles.gradeItem,
+                            { borderLeftColor: theme.primary },
+                        ]}
+                    >
+                        <View style={styles.gradeInfo}>
+                            <Text style={[styles.subject, { color: theme.text }]}>
+                                {grade.subject}
+                            </Text>
+                            <Text style={[styles.marks, { color: theme.textSecondary }]}>
+                                {grade.marks}
+                            </Text>
+                        </View>
+                        <View
+                            style={[
+                                styles.gradeBadge,
+                                { backgroundColor: theme.primary + '20' },
+                            ]}
+                        >
+                            <Text style={[styles.gradeText, { color: theme.primary }]}>
+                                {grade.grade}
+                            </Text>
+                        </View>
+                    </View>
+                ))}
+            </View>
+
+            {/* Recent Activities */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Recent Activities
+                </Text>
+                {recentActivities.map((activity) => (
+                    <View
+                        key={activity.id}
+                        style={[styles.activityItem, { backgroundColor: theme.card }]}
+                    >
+                        <Icon name="trophy" size={20} color={theme.warning} />
+                        <View style={styles.activityInfo}>
+                            <Text style={[styles.activityText, { color: theme.text }]}>
+                                {activity.activity}
+                            </Text>
+                            <Text style={[styles.activityDate, { color: theme.textSecondary }]}>
+                                {activity.date}
+                            </Text>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </ScrollView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    profileHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 20,
+        marginBottom: 15,
+    },
+    avatarContainer: {
+        marginRight: 15,
+    },
+    avatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+    },
+    avatarPlaceholder: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    profileInfo: {
+        flex: 1,
+    },
+    studentName: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    classInfo: {
+        fontSize: 14,
+        marginBottom: 10,
+    },
+    stats: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    statItem: {
+        alignItems: 'center',
+    },
+    statValue: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    statLabel: {
+        fontSize: 12,
+    },
+    section: {
+        paddingHorizontal: 15,
+        marginBottom: 20,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 15,
+    },
+    quickActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    actionButton: {
+        width: '48%',
+        marginBottom: 10,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    actionText: {
+        fontSize: 12,
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    infoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    infoItem: {
+        width: '48%',
+        marginBottom: 15,
+    },
+    infoLabel: {
+        fontSize: 12,
+        marginBottom: 4,
+    },
+    infoValue: {
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    attendanceItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    month: {
+        fontSize: 14,
+        fontWeight: '600',
+        width: 40,
+    },
+    attendanceBar: {
+        flex: 1,
+        height: 8,
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        borderRadius: 4,
+        marginHorizontal: 10,
+        overflow: 'hidden',
+    },
+    attendanceFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    attendanceText: {
+        fontSize: 12,
+        fontWeight: '600',
+        width: 80,
+        textAlign: 'right',
+    },
+    gradeItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 10,
+        borderLeftWidth: 4,
+    },
+    gradeInfo: {
+        flex: 1,
+    },
+    subject: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    marks: {
+        fontSize: 14,
+    },
+    gradeBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+    },
+    gradeText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    activityItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        borderRadius: 8,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    activityInfo: {
+        flex: 1,
+        marginLeft: 15,
+    },
+    activityText: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    activityDate: {
+        fontSize: 12,
+    },
+});
+
+export default StudentDetailsScreen;
+
+================================================================================
+File: TeacherDashboard.js
+Size: 13.56 kB
+================================================================================
+
+// src/screens/Teacher/TeacherDashboard.js
+import React, { useEffect, useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    ActivityIndicator,
+    RefreshControl,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import { selectCurrentUser } from '../../store/slices/authSlice';
+import {
+    fetchTeacherClasses,
+    selectTeacherClasses,
+    selectTeacherLoading,
+    selectTeacherError
+} from '../../store/slices/teacherSlice';
+
+const TeacherDashboard = ({ navigation }) => {
+    const theme = useSelector(selectThemeData);
+    const user = useSelector(selectCurrentUser);
+    const dispatch = useDispatch();
+    const classes = useSelector(selectTeacherClasses);
+    const loading = useSelector(selectTeacherLoading);
+    const error = useSelector(selectTeacherError);
+    const [refreshing, setRefreshing] = useState(false);
+
+    useEffect(() => {
+        loadClasses();
+    }, []);
+
+    const loadClasses = async () => {
+        await dispatch(fetchTeacherClasses());
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadClasses();
+        setRefreshing(false);
+    };
+
+    // ✅ FIXED: Navigate to ClassStudents (which exists in TeacherNavigator)
+    const handleClassPress = (classItem) => {
+        navigation.navigate('ClassStudents', {
+            classId: classItem.classId,
+            className: classItem.className,
+            sectionId: classItem.sectionId,
+            sectionName: classItem.sectionName
+        });
+    };
+
+    // ✅ FIXED: Navigate to MarkAttendance (which exists in TeacherNavigator)
+    const handleTakeAttendance = (classItem) => {
+        navigation.navigate('MarkAttendance', {
+            classId: classItem.classId,
+            className: classItem.className,
+            sectionId: classItem.sectionId,
+            sectionName: classItem.sectionName,
+            subjectId: classItem.subjectId,
+            subjectName: classItem.subjectName
+        });
+    };
+
+    if (loading && !refreshing) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <ScrollView
+            style={[styles.container, { backgroundColor: theme.background }]}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={[theme.primary]}
+                />
+            }
+        >
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <View>
+                    <Text style={[styles.greeting, { color: theme.text }]}>
+                        Welcome back,
+                    </Text>
+                    <Text style={[styles.teacherName, { color: theme.text }]}>
+                        {user?.name || 'Teacher'}
+                    </Text>
+                    <Text style={[styles.designation, { color: theme.textSecondary }]}>
+                        {user?.designation || 'Teacher'}
+                    </Text>
+                </View>
+                <Icon name="school" size={40} color={theme.primary} />
+            </View>
+
+            {/* Stats Cards */}
+            <View style={styles.statsContainer}>
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="account-group" size={24} color={theme.primary} />
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        {classes.length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Classes
+                    </Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="book-open" size={24} color={theme.success} />
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        {classes.reduce((total, cls) => total + (cls.subjectName ? 1 : 0), 0)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        Subjects
+                    </Text>
+                </View>
+
+                <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+                    <Icon name="calendar-check" size={24} color={theme.warning} />
+                    <Text style={[styles.statNumber, { color: theme.text }]}>
+                        Today
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                        {new Date().toLocaleDateString()}
+                    </Text>
+                </View>
+            </View>
+
+            {/* Classes Section */}
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                        My Classes
+                    </Text>
+                </View>
+
+                {classes.map((classItem) => (
+                    <TouchableOpacity
+                        key={`${classItem.classId}-${classItem.sectionId}`}
+                        style={[styles.classCard, { backgroundColor: theme.card }]}
+                        onPress={() => handleClassPress(classItem)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={styles.classCardHeader}>
+                            <View style={[styles.classIcon, { backgroundColor: theme.primary + '20' }]}>
+                                <Icon name="school" size={24} color={theme.primary} />
+                            </View>
+                            <View style={styles.classInfo}>
+                                <Text style={[styles.className, { color: theme.text }]}>
+                                    {classItem.className} - {classItem.sectionName}
+                                </Text>
+                                <Text style={[styles.subject, { color: theme.textSecondary }]}>
+                                    {classItem.subjectName || 'Class Incharge'}
+                                </Text>
+                            </View>
+                            <Icon name="chevron-right" size={24} color={theme.textSecondary} />
+                        </View>
+
+                        <View style={styles.classCardFooter}>
+                            <TouchableOpacity
+                                style={styles.classAction}
+                                onPress={() => handleTakeAttendance(classItem)}
+                            >
+                                <Icon name="clipboard-check" size={16} color={theme.primary} />
+                                <Text style={[styles.actionText, { color: theme.textSecondary }]}>
+                                    Take Attendance
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                ))}
+
+                {classes.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                        <Icon name="school-outline" size={60} color={theme.textSecondary} />
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                            No classes assigned yet
+                        </Text>
+                        {error && (
+                            <Text style={[styles.errorText, { color: theme.error }]}>
+                                {error}
+                            </Text>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {/* Quick Actions */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                    Quick Actions
+                </Text>
+                <View style={styles.quickActions}>
+                    {/* ✅ FIXED: Navigate to TeacherAttendance (Tab Navigator) */}
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={() => navigation.navigate('TeacherAttendance')}
+                    >
+                        <Icon name="clipboard-check" size={24} color={theme.primary} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            Attendance
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* ✅ FIXED: Navigate to TeacherClasses (Tab Navigator) */}
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: theme.card }]}
+                        onPress={() => navigation.navigate('TeacherClasses')}
+                    >
+                        <Icon name="book-open" size={24} color={theme.success} />
+                        <Text style={[styles.actionText, { color: theme.text }]}>
+                            My Classes
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+    style={[styles.actionButton, { backgroundColor: theme.card }]}
+    onPress={() => navigation.navigate('TeacherDiaryList')}
+>
+    <Icon name="book-open-variant" size={24} color={theme.info || '#2196F3'} />
+    <Text style={[styles.actionText, { color: theme.text }]}>
+        Diary
+    </Text>
+</TouchableOpacity>
+                </View>
+            </View>
+        </ScrollView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        margin: 15,
+        borderRadius: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+    greeting: {
+        fontSize: 14,
+        opacity: 0.8,
+    },
+    teacherName: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginTop: 2,
+    },
+    designation: {
+        fontSize: 14,
+        marginTop: 2,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        marginBottom: 20,
+    },
+    statCard: {
+        flex: 1,
+        marginHorizontal: 5,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    statNumber: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginVertical: 5,
+    },
+    statLabel: {
+        fontSize: 12,
+    },
+    section: {
+        paddingHorizontal: 15,
+        marginBottom: 25,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    classCard: {
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 10,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    classCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    classIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    classInfo: {
+        flex: 1,
+    },
+    className: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    subject: {
+        fontSize: 12,
+    },
+    classCardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    classAction: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    actionText: {
+        fontSize: 12,
+        marginLeft: 4,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        marginTop: 10,
+    },
+    errorText: {
+        fontSize: 14,
+        marginTop: 10,
+        textAlign: 'center',
+    },
+    quickActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    actionButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+});
+
+export default TeacherDashboard;
+
+================================================================================
+File: TeacherDiaryListScreen.js
+Size: 45.47 kB
+================================================================================
+
+// // // import React, { useState, useCallback, useRef } from 'react';
+// // // import {
+// // //     View,
+// // //     Text,
+// // //     StyleSheet,
+// // //     ScrollView,
+// // //     TouchableOpacity,
+// // //     FlatList,
+// // //     ActivityIndicator,
+// // //     RefreshControl,
+// // //     Alert,
+// // // } from 'react-native';
+// // // import { useSelector } from 'react-redux';
+// // // import Icon from 'react-native-vector-icons/MaterialIcons';
+// // // import { selectThemeData } from '../../store/slices/themeSlice';
+// // // import { useGetTeacherDiariesQuery, useGetTeacherClassesQuery } from '../../store/diaryApi';
+// // // import DiaryFilterBar from './components/DiaryFilterBar';
+// // // import DiaryCard from './components/DiaryCard';
+
+// // // const TeacherDiaryListScreen = ({ navigation }) => {
+// // //     const theme = useSelector(selectThemeData);
+// // //     const [refreshing, setRefreshing] = useState(false);
+// // //     const [filters, setFilters] = useState({
+// // //         classId: null,
+// // //         sectionIds: [],
+// // //         subjectId: null,
+// // //         dateFrom: null,
+// // //         dateTo: null,
+// // //     });
+// // //     const [appliedFilters, setAppliedFilters] = useState(filters);
+
+// // //     const { data: classesData, isLoading: classesLoading } = useGetTeacherClassesQuery();
+// // //     const {
+// // //         data: diariesData,
+// // //         isLoading,
+// // //         isFetching,
+// // //         error,
+// // //         refetch,
+// // //     } = useGetTeacherDiariesQuery(appliedFilters);
+
+// // //     const onRefresh = useCallback(async () => {
+// // //         setRefreshing(true);
+// // //         await refetch();
+// // //         setRefresfhing(false);
+// // //     }, [refetch]);
+
+// // //     const handleApplyFilters = useCallback((newFilters) => {
+// // //         setAppliedFilters(newFilters);
+// // //     }, []);
+
+// // //     const handleResetFilters = useCallback(() => {
+// // //         const resetFilters = {
+// // //             classId: null,
+// // //             sectionIds: [],
+// // //             subjectId: null,
+// // //             dateFrom: null,
+// // //             dateTo: null,
+// // //         };
+// // //         setFilters(resetFilters);
+// // //         setAppliedFilters(resetFilters);
+// // //     }, []);
+
+// // //     const handleCreateDiary = () => {
+// // //         navigation.navigate('CreateDiary');
+// // //     };
+
+// // //     const handleEditDiary = (entry) => {
+// // //         navigation.navigate('CreateDiary', { editEntry: entry });
+// // //     };
+
+// // //     const renderEmptyState = () => (
+// // //         <View style={[styles.emptyContainer, { backgroundColor: theme.card }]}>
+// // //             <Icon name="article" size={60} color={theme.textSecondary} />
+// // //             <Text style={[styles.emptyTitle, { color: theme.text }]}>
+// // //                 No Diary Entries
+// // //             </Text>
+// // //             <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+// // //                 Create your first diary entry by tapping the + button
+// // //             </Text>
+// // //             <TouchableOpacity
+// // //                 style={[styles.emptyButton, { backgroundColor: theme.primary }]}
+// // //                 onPress={handleCreateDiary}
+// // //             >
+// // //                 <Icon name="add" size={20} color="#FFF" />
+// // //                 <Text style={styles.emptyButtonText}>Create Diary</Text>
+// // //             </TouchableOpacity>
+// // //         </View>
+// // //     );
+
+// // //     if (isLoading && !refreshing) {
+// // //         return (
+// // //             <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+// // //                 <ActivityIndicator size="large" color={theme.primary} />
+// // //                 <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+// // //                     Loading diaries...
+// // //                 </Text>
+// // //             </View>
+// // //         );
+// // //     }
+
+// // //     const diaries = diariesData?.data?.entries || [];
+// // //     const totalCount = diariesData?.data?.count || 0;
+
+// // //     return (
+// // //         <View style={[styles.container, { backgroundColor: theme.background }]}>
+// // //             {/* Header */}
+// // //             <View style={[styles.header, { backgroundColor: theme.card }]}>
+// // //                 <TouchableOpacity onPress={() => navigation.goBack()}>
+// // //                     <Icon name="arrow-back" size={24} color={theme.text} />
+// // //                 </TouchableOpacity>
+// // //                 <Text style={[styles.headerTitle, { color: theme.text }]}>My Diaries</Text>
+// // //                 <View style={{ width: 40 }} />
+// // //             </View>
+
+// // //             {/* Filter Bar */}
+// // //             <DiaryFilterBar
+// // //                 filters={filters}
+// // //                 setFilters={setFilters}
+// // //                 onApply={handleApplyFilters}
+// // //                 onReset={handleResetFilters}
+// // //                 classesData={classesData}
+// // //             />
+
+// // //             {/* Results Count */}
+// // //             {!isLoading && (
+// // //                 <View style={[styles.resultsBar, { backgroundColor: theme.card }]}>
+// // //                     <Text style={[styles.resultsText, { color: theme.textSecondary }]}>
+// // //                         {totalCount} {totalCount === 1 ? 'entry' : 'entries'} found
+// // //                     </Text>
+// // //                     {(appliedFilters.classId || appliedFilters.sectionIds.length > 0 || 
+// // //                       appliedFilters.subjectId || appliedFilters.dateFrom || appliedFilters.dateTo) && (
+// // //                         <TouchableOpacity onPress={handleResetFilters}>
+// // //                             <Text style={[styles.clearText, { color: theme.primary }]}>Clear All</Text>
+// // //                         </TouchableOpacity>
+// // //                     )}
+// // //                 </View>
+// // //             )}
+
+// // //             {/* Diary List */}
+// // //             <FlatList
+// // //                 data={diaries}
+// // //                 renderItem={({ item }) => (
+// // //                     <DiaryCard entry={item} theme={theme} onPress={() => handleEditDiary(item)} />
+// // //                 )}
+// // //                 keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+// // //                 contentContainerStyle={styles.listContent}
+// // //                 refreshControl={
+// // //                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+// // //                 }
+// // //                 ListEmptyComponent={renderEmptyState()}
+// // //                 showsVerticalScrollIndicator={false}
+// // //             />
+
+// // //             {/* FAB Button */}
+// // //             <TouchableOpacity
+// // //                 style={[styles.fab, { backgroundColor: theme.primary }]}
+// // //                 onPress={handleCreateDiary}
+// // //                 activeOpacity={0.8}
+// // //             >
+// // //                 <Icon name="add" size={28} color="#FFF" />
+// // //             </TouchableOpacity>
+// // //         </View>
+// // //     );
+// // // };
+
+// // // const styles = StyleSheet.create({
+// // //     container: {
+// // //         flex: 1,
+// // //     },
+// // //     loadingContainer: {
+// // //         flex: 1,
+// // //         justifyContent: 'center',
+// // //         alignItems: 'center',
+// // //     },
+// // //     loadingText: {
+// // //         marginTop: 12,
+// // //         fontSize: 14,
+// // //     },
+// // //     header: {
+// // //         flexDirection: 'row',
+// // //         alignItems: 'center',
+// // //         justifyContent: 'space-between',
+// // //         paddingHorizontal: 16,
+// // //         paddingVertical: 12,
+// // //         elevation: 2,
+// // //         shadowColor: '#000',
+// // //         shadowOffset: { width: 0, height: 2 },
+// // //         shadowOpacity: 0.1,
+// // //         shadowRadius: 2,
+// // //     },
+// // //     headerTitle: {
+// // //         fontSize: 20,
+// // //         fontWeight: 'bold',
+// // //     },
+// // //     resultsBar: {
+// // //         flexDirection: 'row',
+// // //         justifyContent: 'space-between',
+// // //         alignItems: 'center',
+// // //         paddingHorizontal: 16,
+// // //         paddingVertical: 10,
+// // //         marginHorizontal: 16,
+// // //         marginTop: 12,
+// // //         marginBottom: 8,
+// // //         borderRadius: 8,
+// // //     },
+// // //     resultsText: {
+// // //         fontSize: 13,
+// // //     },
+// // //     clearText: {
+// // //         fontSize: 13,
+// // //         fontWeight: '600',
+// // //     },
+// // //     listContent: {
+// // //         paddingHorizontal: 16,
+// // //         paddingBottom: 80,
+// // //     },
+// // //     emptyContainer: {
+// // //         alignItems: 'center',
+// // //         paddingVertical: 60,
+// // //         marginHorizontal: 16,
+// // //         borderRadius: 16,
+// // //     },
+// // //     emptyTitle: {
+// // //         fontSize: 18,
+// // //         fontWeight: 'bold',
+// // //         marginTop: 16,
+// // //         marginBottom: 8,
+// // //     },
+// // //     emptySubtitle: {
+// // //         fontSize: 14,
+// // //         textAlign: 'center',
+// // //         marginBottom: 20,
+// // //         paddingHorizontal: 40,
+// // //     },
+// // //     emptyButton: {
+// // //         flexDirection: 'row',
+// // //         alignItems: 'center',
+// // //         paddingHorizontal: 20,
+// // //         paddingVertical: 10,
+// // //         borderRadius: 25,
+// // //         gap: 8,
+// // //     },
+// // //     emptyButtonText: {
+// // //         color: '#FFF',
+// // //         fontSize: 14,
+// // //         fontWeight: '600',
+// // //     },
+// // //     fab: {
+// // //         position: 'absolute',
+// // //         bottom: 20,
+// // //         right: 20,
+// // //         width: 56,
+// // //         height: 56,
+// // //         borderRadius: 28,
+// // //         justifyContent: 'center',
+// // //         alignItems: 'center',
+// // //         elevation: 5,
+// // //         shadowColor: '#000',
+// // //         shadowOffset: { width: 0, height: 2 },
+// // //         shadowOpacity: 0.3,
+// // //         shadowRadius: 4,
+// // //     },
+// // // });
+
+// // // export default TeacherDiaryListScreen;
+// // import React, { useState, useCallback, useRef } from 'react';
+// // import {
+// //     View,
+// //     Text,
+// //     StyleSheet,
+// //     ScrollView,
+// //     TouchableOpacity,
+// //     FlatList,
+// //     ActivityIndicator,
+// //     RefreshControl,
+// //     Alert,
+// // } from 'react-native';
+// // import { useSelector } from 'react-redux';
+// // import Icon from 'react-native-vector-icons/MaterialIcons';
+// // import { selectThemeData } from '../../store/slices/themeSlice';
+// // import { useGetTeacherDiariesQuery, useGetTeacherClassesQuery } from '../../store/diaryApi';
+// // import DiaryFilterBar from './components/DiaryFilterBar';
+// // import DiaryCard from './components/DiaryCard';
+
+// // const TeacherDiaryListScreen = ({ navigation }) => {
+// //     const theme = useSelector(selectThemeData);
+// //     const [refreshing, setRefreshing] = useState(false);
+// //     const [filters, setFilters] = useState({
+// //         classId: null,
+// //         sectionIds: [],
+// //         subjectId: null,
+// //         dateFrom: null,
+// //         dateTo: null,
+// //     });
+// //     const [appliedFilters, setAppliedFilters] = useState(filters);
+
+// //     const { data: classesData, isLoading: classesLoading } = useGetTeacherClassesQuery();
+// //     const {
+// //         data: diariesData,
+// //         isLoading,
+// //         isFetching,
+// //         error,
+// //         refetch,
+// //     } = useGetTeacherDiariesQuery(appliedFilters);
+
+// //     const onRefresh = useCallback(async () => {
+// //         setRefreshing(true);
+// //         await refetch();
+// //         setRefreshing(false);  // ✅ FIXED TYPO
+// //     }, [refetch]);
+
+// //     const handleApplyFilters = useCallback((newFilters) => {
+// //         setAppliedFilters(newFilters);
+// //     }, []);
+
+// //     const handleResetFilters = useCallback(() => {
+// //         const resetFilters = {
+// //             classId: null,
+// //             sectionIds: [],
+// //             subjectId: null,
+// //             dateFrom: null,
+// //             dateTo: null,
+// //         };
+// //         setFilters(resetFilters);
+// //         setAppliedFilters(resetFilters);
+// //     }, []);
+
+// //     const handleCreateDiary = () => {
+// //         navigation.navigate('CreateDiary');
+// //     };
+
+// //    const handleEditDiary = (entry) => {
+// //     navigation.navigate('CreateDiary', { 
+// //         editEntry: {
+// //             id: entry.id,
+// //             classId: entry.classId,
+// //             className: entry.className,
+// //             sectionIds: entry.sectionIds || [],
+// //             sectionNames: entry.sectionNames || [],
+// //             subjectId: entry.subjectId,
+// //             subjectName: entry.subjectName,
+// //             content: entry.content,
+// //             isPublished: entry.isPublished,
+// //             date: entry.date
+// //         }
+// //     });
+// // };
+
+// //     // Strip HTML tags for preview
+// //     const stripHtml = (html) => {
+// //         if (!html) return '';
+// //         return html.replace(/<[^>]*>/g, '').substring(0, 100);
+// //     };
+
+// //     const renderEmptyState = () => (
+// //         <View style={[styles.emptyContainer, { backgroundColor: theme.card }]}>
+// //             <Icon name="article" size={60} color={theme.textSecondary} />
+// //             <Text style={[styles.emptyTitle, { color: theme.text }]}>
+// //                 No Diary Entries
+// //             </Text>
+// //             <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+// //                 Create your first diary entry by tapping the + button
+// //             </Text>
+// //             <TouchableOpacity
+// //                 style={[styles.emptyButton, { backgroundColor: theme.primary }]}
+// //                 onPress={handleCreateDiary}
+// //             >
+// //                 <Icon name="add" size={20} color="#FFF" />
+// //                 <Text style={styles.emptyButtonText}>Create Diary</Text>
+// //             </TouchableOpacity>
+// //         </View>
+// //     );
+
+// //     // Transform entries for DiaryCard
+// //     const transformedEntries = (diariesData?.data?.entries || []).map(entry => ({
+// //         id: entry.id,
+// //         date: entry.date,
+// //         className: entry.className,
+// //         sectionNames: entry.sectionNames || [],
+// //         subjectName: entry.subjectName,
+// //         content: entry.content,
+// //         isPublished: entry.isPublished,
+// //         previewContent: stripHtml(entry.content),
+// //     }));
+
+// //     if (isLoading && !refreshing) {
+// //         return (
+// //             <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+// //                 <ActivityIndicator size="large" color={theme.primary} />
+// //                 <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+// //                     Loading diaries...
+// //                 </Text>
+// //             </View>
+// //         );
+// //     }
+
+// //     const totalCount = diariesData?.data?.count || 0;
+
+// //     return (
+// //         <View style={[styles.container, { backgroundColor: theme.background }]}>
+// //             {/* Header */}
+// //             <View style={[styles.header, { backgroundColor: theme.card }]}>
+// //                 <TouchableOpacity onPress={() => navigation.goBack()}>
+// //                     <Icon name="arrow-back" size={24} color={theme.text} />
+// //                 </TouchableOpacity>
+// //                 <Text style={[styles.headerTitle, { color: theme.text }]}>My Diaries</Text>
+// //                 <View style={{ width: 40 }} />
+// //             </View>
+
+// //             {/* Filter Bar */}
+// //             <DiaryFilterBar
+// //                 filters={filters}
+// //                 setFilters={setFilters}
+// //                 onApply={handleApplyFilters}
+// //                 onReset={handleResetFilters}
+// //                 classesData={classesData}
+// //             />
+
+// //             {/* Results Count */}
+// //             {!isLoading && (
+// //                 <View style={[styles.resultsBar, { backgroundColor: theme.card }]}>
+// //                     <Text style={[styles.resultsText, { color: theme.textSecondary }]}>
+// //                         {totalCount} {totalCount === 1 ? 'entry' : 'entries'} found
+// //                     </Text>
+// //                     {(appliedFilters.classId || appliedFilters.sectionIds.length > 0 || 
+// //                       appliedFilters.subjectId || appliedFilters.dateFrom || appliedFilters.dateTo) && (
+// //                         <TouchableOpacity onPress={handleResetFilters}>
+// //                             <Text style={[styles.clearText, { color: theme.primary }]}>Clear All</Text>
+// //                         </TouchableOpacity>
+// //                     )}
+// //                 </View>
+// //             )}
+
+// //             {/* Diary List */}
+// //             <FlatList
+// //                 data={transformedEntries}
+// //                 renderItem={({ item }) => (
+// //                     <DiaryCard entry={item} theme={theme} onPress={() => handleEditDiary(item)} />
+// //                 )}
+// //                 keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+// //                 contentContainerStyle={styles.listContent}
+// //                 refreshControl={
+// //                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+// //                 }
+// //                 ListEmptyComponent={renderEmptyState()}
+// //                 showsVerticalScrollIndicator={false}
+// //             />
+
+// //             {/* FAB Button */}
+// //             <TouchableOpacity
+// //                 style={[styles.fab, { backgroundColor: theme.primary }]}
+// //                 onPress={handleCreateDiary}
+// //                 activeOpacity={0.8}
+// //             >
+// //                 <Icon name="add" size={28} color="#FFF" />
+// //             </TouchableOpacity>
+// //         </View>
+// //     );
+// // };
+
+// // const styles = StyleSheet.create({
+// //     container: {
+// //         flex: 1,
+// //     },
+// //     loadingContainer: {
+// //         flex: 1,
+// //         justifyContent: 'center',
+// //         alignItems: 'center',
+// //     },
+// //     loadingText: {
+// //         marginTop: 12,
+// //         fontSize: 14,
+// //     },
+// //     header: {
+// //         flexDirection: 'row',
+// //         alignItems: 'center',
+// //         justifyContent: 'space-between',
+// //         paddingHorizontal: 16,
+// //         paddingVertical: 12,
+// //         elevation: 2,
+// //         shadowColor: '#000',
+// //         shadowOffset: { width: 0, height: 2 },
+// //         shadowOpacity: 0.1,
+// //         shadowRadius: 2,
+// //     },
+// //     headerTitle: {
+// //         fontSize: 20,
+// //         fontWeight: 'bold',
+// //     },
+// //     resultsBar: {
+// //         flexDirection: 'row',
+// //         justifyContent: 'space-between',
+// //         alignItems: 'center',
+// //         paddingHorizontal: 16,
+// //         paddingVertical: 10,
+// //         marginHorizontal: 16,
+// //         marginTop: 12,
+// //         marginBottom: 8,
+// //         borderRadius: 8,
+// //     },
+// //     resultsText: {
+// //         fontSize: 13,
+// //     },
+// //     clearText: {
+// //         fontSize: 13,
+// //         fontWeight: '600',
+// //     },
+// //     listContent: {
+// //         paddingHorizontal: 16,
+// //         paddingBottom: 80,
+// //     },
+// //     emptyContainer: {
+// //         alignItems: 'center',
+// //         paddingVertical: 60,
+// //         marginHorizontal: 16,
+// //         borderRadius: 16,
+// //     },
+// //     emptyTitle: {
+// //         fontSize: 18,
+// //         fontWeight: 'bold',
+// //         marginTop: 16,
+// //         marginBottom: 8,
+// //     },
+// //     emptySubtitle: {
+// //         fontSize: 14,
+// //         textAlign: 'center',
+// //         marginBottom: 20,
+// //         paddingHorizontal: 40,
+// //     },
+// //     emptyButton: {
+// //         flexDirection: 'row',
+// //         alignItems: 'center',
+// //         paddingHorizontal: 20,
+// //         paddingVertical: 10,
+// //         borderRadius: 25,
+// //         gap: 8,
+// //     },
+// //     emptyButtonText: {
+// //         color: '#FFF',
+// //         fontSize: 14,
+// //         fontWeight: '600',
+// //     },
+// //     fab: {
+// //         position: 'absolute',
+// //         bottom: 20,
+// //         right: 20,
+// //         width: 56,
+// //         height: 56,
+// //         borderRadius: 28,
+// //         justifyContent: 'center',
+// //         alignItems: 'center',
+// //         elevation: 5,
+// //         shadowColor: '#000',
+// //         shadowOffset: { width: 0, height: 2 },
+// //         shadowOpacity: 0.3,
+// //         shadowRadius: 4,
+// //     },
+// // });
+
+// // export default TeacherDiaryListScreen;
+
+// // TeacherDiaryListScreen.js - UPDATED with better data handling
+// import React, { useState, useCallback } from 'react';
+// import {
+//     View,
+//     Text,
+//     StyleSheet,
+//     TouchableOpacity,
+//     FlatList,
+//     ActivityIndicator,
+//     RefreshControl,
+// } from 'react-native';
+// import { useSelector } from 'react-redux';
+// import Icon from 'react-native-vector-icons/MaterialIcons';
+// import { selectThemeData } from '../../store/slices/themeSlice';
+// import { useGetTeacherDiariesQuery, useGetTeacherClassesQuery } from '../../store/diaryApi';
+// import DiaryFilterBar from './components/DiaryFilterBar';
+// import DiaryCard from './components/DiaryCard';
+
+// const TeacherDiaryListScreen = ({ navigation }) => {
+//     const theme = useSelector(selectThemeData);
+//     const [refreshing, setRefreshing] = useState(false);
+//     const [filters, setFilters] = useState({
+//         classId: null,
+//         sectionIds: [],
+//         subjectId: null,
+//         dateFrom: null,
+//         dateTo: null,
+//     });
+//     const [appliedFilters, setAppliedFilters] = useState(filters);
+
+//     const { data: classesData, isLoading: classesLoading } = useGetTeacherClassesQuery();
+//     const {
+//         data: diariesData,
+//         isLoading,
+//         isFetching,
+//         error,
+//         refetch,
+//     } = useGetTeacherDiariesQuery(appliedFilters);
+
+//     // Debug: Log the diaries data structure
+//     console.log('📓 Diaries Data Structure:', JSON.stringify(diariesData, null, 2));
+
+//     const onRefresh = useCallback(async () => {
+//         setRefreshing(true);
+//         await refetch();
+//         setRefreshing(false);
+//     }, [refetch]);
+
+//     const handleApplyFilters = useCallback((newFilters) => {
+//         setAppliedFilters(newFilters);
+//     }, []);
+
+//     const handleResetFilters = useCallback(() => {
+//         const resetFilters = {
+//             classId: null,
+//             sectionIds: [],
+//             subjectId: null,
+//             dateFrom: null,
+//             dateTo: null,
+//         };
+//         setFilters(resetFilters);
+//         setAppliedFilters(resetFilters);
+//     }, []);
+
+//     const handleCreateDiary = () => {
+//         navigation.navigate('CreateDiary');
+//     };
+
+//     const handleEditDiary = (entry) => {
+//         // Debug: Log what we're passing
+//         console.log('✏️ Editing diary entry:', JSON.stringify(entry, null, 2));
+        
+//         // Ensure we have all required fields
+//         const editData = {
+//             id: entry.id,
+//             classId: entry.classId,
+//             className: entry.className,
+//             sectionIds: Array.isArray(entry.sectionIds) ? entry.sectionIds : [],
+//             sectionNames: Array.isArray(entry.sectionNames) ? entry.sectionNames : [],
+//             subjectId: entry.subjectId,
+//             subjectName: entry.subjectName,
+//             content: entry.content || '',
+//             isPublished: entry.isPublished,
+//             date: entry.date
+//         };
+        
+//         console.log('📤 Passing to edit screen:', editData);
+        
+//         navigation.navigate('CreateDiary', { 
+//             editEntry: editData
+//         });
+//     };
+
+//     // Strip HTML tags for preview
+//     const stripHtml = (html) => {
+//         if (!html) return '';
+//         return html.replace(/<[^>]*>/g, '').substring(0, 100);
+//     };
+
+//     const renderEmptyState = () => (
+//         <View style={[styles.emptyContainer, { backgroundColor: theme.card }]}>
+//             <Icon name="article" size={60} color={theme.textSecondary} />
+//             <Text style={[styles.emptyTitle, { color: theme.text }]}>
+//                 No Diary Entries
+//             </Text>
+//             <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+//                 Create your first diary entry by tapping the + button
+//             </Text>
+//             <TouchableOpacity
+//                 style={[styles.emptyButton, { backgroundColor: theme.primary }]}
+//                 onPress={handleCreateDiary}
+//             >
+//                 <Icon name="add" size={20} color="#FFF" />
+//                 <Text style={styles.emptyButtonText}>Create Diary</Text>
+//             </TouchableOpacity>
+//         </View>
+//     );
+
+//     // Transform entries for DiaryCard - ensure data structure is correct
+//     const transformedEntries = (diariesData?.data?.entries || []).map(entry => ({
+//         id: entry.id,
+//         date: entry.date || '',
+//         classId: entry.classId,
+//         className: entry.className || '',
+//         sectionIds: entry.sectionIds || [],
+//         sectionNames: entry.sectionNames || [],
+//         subjectId: entry.subjectId,
+//         subjectName: entry.subjectName || '',
+//         content: entry.content || '',
+//         isPublished: entry.isPublished || false,
+//         previewContent: stripHtml(entry.content),
+//     }));
+
+//     console.log('📋 Transformed entries count:', transformedEntries.length);
+//     if (transformedEntries.length > 0) {
+//         console.log('📋 First entry:', JSON.stringify(transformedEntries[0], null, 2));
+//     }
+
+//     if (isLoading && !refreshing) {
+//         return (
+//             <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+//                 <ActivityIndicator size="large" color={theme.primary} />
+//                 <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+//                     Loading diaries...
+//                 </Text>
+//             </View>
+//         );
+//     }
+
+//     const totalCount = diariesData?.data?.count || 0;
+
+//     return (
+//         <View style={[styles.container, { backgroundColor: theme.background }]}>
+//             {/* Header */}
+//             <View style={[styles.header, { backgroundColor: theme.card }]}>
+//                 <TouchableOpacity onPress={() => navigation.goBack()}>
+//                     <Icon name="arrow-back" size={24} color={theme.text} />
+//                 </TouchableOpacity>
+//                 <Text style={[styles.headerTitle, { color: theme.text }]}>My Diaries</Text>
+//                 <View style={{ width: 40 }} />
+//             </View>
+
+//             {/* Filter Bar */}
+//             <DiaryFilterBar
+//                 filters={filters}
+//                 setFilters={setFilters}
+//                 onApply={handleApplyFilters}
+//                 onReset={handleResetFilters}
+//                 classesData={classesData}
+//             />
+
+//             {/* Results Count */}
+//             {!isLoading && (
+//                 <View style={[styles.resultsBar, { backgroundColor: theme.card }]}>
+//                     <Text style={[styles.resultsText, { color: theme.textSecondary }]}>
+//                         {totalCount} {totalCount === 1 ? 'entry' : 'entries'} found
+//                     </Text>
+//                     {(appliedFilters.classId || appliedFilters.sectionIds.length > 0 || 
+//                       appliedFilters.subjectId || appliedFilters.dateFrom || appliedFilters.dateTo) && (
+//                         <TouchableOpacity onPress={handleResetFilters}>
+//                             <Text style={[styles.clearText, { color: theme.primary }]}>Clear All</Text>
+//                         </TouchableOpacity>
+//                     )}
+//                 </View>
+//             )}
+
+//             {/* Diary List */}
+//             <FlatList
+//                 data={transformedEntries}
+//                 renderItem={({ item }) => (
+//                     <DiaryCard entry={item} theme={theme} onPress={() => handleEditDiary(item)} />
+//                 )}
+//                 keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+//                 contentContainerStyle={styles.listContent}
+//                 refreshControl={
+//                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
+//                 }
+//                 ListEmptyComponent={renderEmptyState()}
+//                 showsVerticalScrollIndicator={false}
+//             />
+
+//             {/* FAB Button */}
+//             <TouchableOpacity
+//                 style={[styles.fab, { backgroundColor: theme.primary }]}
+//                 onPress={handleCreateDiary}
+//                 activeOpacity={0.8}
+//             >
+//                 <Icon name="add" size={28} color="#FFF" />
+//             </TouchableOpacity>
+//         </View>
+//     );
+// };
+
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//     },
+//     loadingContainer: {
+//         flex: 1,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//     },
+//     loadingText: {
+//         marginTop: 12,
+//         fontSize: 14,
+//     },
+//     header: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         justifyContent: 'space-between',
+//         paddingHorizontal: 16,
+//         paddingVertical: 12,
+//         elevation: 2,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.1,
+//         shadowRadius: 2,
+//     },
+//     headerTitle: {
+//         fontSize: 20,
+//         fontWeight: 'bold',
+//     },
+//     resultsBar: {
+//         flexDirection: 'row',
+//         justifyContent: 'space-between',
+//         alignItems: 'center',
+//         paddingHorizontal: 16,
+//         paddingVertical: 10,
+//         marginHorizontal: 16,
+//         marginTop: 12,
+//         marginBottom: 8,
+//         borderRadius: 8,
+//     },
+//     resultsText: {
+//         fontSize: 13,
+//     },
+//     clearText: {
+//         fontSize: 13,
+//         fontWeight: '600',
+//     },
+//     listContent: {
+//         paddingHorizontal: 16,
+//         paddingBottom: 80,
+//     },
+//     emptyContainer: {
+//         alignItems: 'center',
+//         paddingVertical: 60,
+//         marginHorizontal: 16,
+//         borderRadius: 16,
+//     },
+//     emptyTitle: {
+//         fontSize: 18,
+//         fontWeight: 'bold',
+//         marginTop: 16,
+//         marginBottom: 8,
+//     },
+//     emptySubtitle: {
+//         fontSize: 14,
+//         textAlign: 'center',
+//         marginBottom: 20,
+//         paddingHorizontal: 40,
+//     },
+//     emptyButton: {
+//         flexDirection: 'row',
+//         alignItems: 'center',
+//         paddingHorizontal: 20,
+//         paddingVertical: 10,
+//         borderRadius: 25,
+//         gap: 8,
+//     },
+//     emptyButtonText: {
+//         color: '#FFF',
+//         fontSize: 14,
+//         fontWeight: '600',
+//     },
+//     fab: {
+//         position: 'absolute',
+//         bottom: 20,
+//         right: 20,
+//         width: 56,
+//         height: 56,
+//         borderRadius: 28,
+//         justifyContent: 'center',
+//         alignItems: 'center',
+//         elevation: 5,
+//         shadowColor: '#000',
+//         shadowOffset: { width: 0, height: 2 },
+//         shadowOpacity: 0.3,
+//         shadowRadius: 4,
+//     },
+// });
+
+// export default TeacherDiaryListScreen;
+// TeacherDiaryListScreen.js - OPTIMIZED with Today's Diaries by Default
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    FlatList,
+    ActivityIndicator,
+    RefreshControl,
+    Platform,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { selectThemeData } from '../../store/slices/themeSlice';
+import { useGetTeacherDiariesQuery, useGetTeacherClassesQuery } from '../../store/diaryApi';
+import DiaryFilterBar from './components/DiaryFilterBar';
+import DiaryCard from './components/DiaryCard';
+import { format, startOfToday, endOfToday } from 'date-fns';
+
+const TeacherDiaryListScreen = ({ navigation }) => {
+    const theme = useSelector(selectThemeData);
+    const [refreshing, setRefreshing] = useState(false);
+    
+    // Get today's date range
+    const todayStart = useMemo(() => format(startOfToday(), 'yyyy-MM-dd'), []);
+    const todayEnd = useMemo(() => format(endOfToday(), 'yyyy-MM-dd'), []);
+    
+    // Initialize filters with today's date range
+    const [filters, setFilters] = useState({
+        classId: null,
+        sectionIds: [],
+        subjectId: null,
+        dateFrom: todayStart,
+        dateTo: todayEnd,
+    });
+    const [appliedFilters, setAppliedFilters] = useState(filters);
+
+    const { data: classesData, isLoading: classesLoading } = useGetTeacherClassesQuery();
+    const {
+        data: diariesData,
+        isLoading,
+        isFetching,
+        error,
+        refetch,
+    } = useGetTeacherDiariesQuery(appliedFilters);
+
+    // Reset to today's date when component mounts
+    useEffect(() => {
+        const todayFilters = {
+            classId: null,
+            sectionIds: [],
+            subjectId: null,
+            dateFrom: todayStart,
+            dateTo: todayEnd,
+        };
+        setFilters(todayFilters);
+        setAppliedFilters(todayFilters);
+    }, [todayStart, todayEnd]);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await refetch();
+        setRefreshing(false);
+    }, [refetch]);
+
+    const handleApplyFilters = useCallback((newFilters) => {
+        setAppliedFilters(newFilters);
+    }, []);
+
+    const handleResetFilters = useCallback(() => {
+        const resetFilters = {
+            classId: null,
+            sectionIds: [],
+            subjectId: null,
+            dateFrom: todayStart,
+            dateTo: todayEnd,
+        };
+        setFilters(resetFilters);
+        setAppliedFilters(resetFilters);
+    }, [todayStart, todayEnd]);
+
+    const handleCreateDiary = useCallback(() => {
+        navigation.navigate('CreateDiary');
+    }, [navigation]);
+
+    const handleEditDiary = useCallback((entry) => {
+        const editData = {
+            id: entry.id,
+            classId: entry.classId,
+            className: entry.className,
+            sectionIds: Array.isArray(entry.sectionIds) ? entry.sectionIds : [],
+            sectionNames: Array.isArray(entry.sectionNames) ? entry.sectionNames : [],
+            subjectId: entry.subjectId,
+            subjectName: entry.subjectName,
+            content: entry.content || '',
+            isPublished: entry.isPublished,
+            date: entry.date
+        };
+        
+        navigation.navigate('CreateDiary', { 
+            editEntry: editData
+        });
+    }, [navigation]);
+
+    // Memoized strip HTML function
+    const stripHtml = useCallback((html) => {
+        if (!html) return '';
+        return html.replace(/<[^>]*>/g, '').substring(0, 100);
+    }, []);
+
+    // Memoize transformed entries
+    const transformedEntries = useMemo(() => {
+        const entries = diariesData?.data?.entries || [];
+        return entries.map(entry => ({
+            id: entry.id,
+            date: entry.date || '',
+            classId: entry.classId,
+            className: entry.className || '',
+            sectionIds: entry.sectionIds || [],
+            sectionNames: entry.sectionNames || [],
+            subjectId: entry.subjectId,
+            subjectName: entry.subjectName || '',
+            content: entry.content || '',
+            isPublished: entry.isPublished || false,
+            previewContent: stripHtml(entry.content),
+        }));
+    }, [diariesData?.data?.entries, stripHtml]);
+
+    // Memoize empty state component
+    const renderEmptyState = useCallback(() => (
+        <View style={[styles.emptyContainer, { backgroundColor: theme.card }]}>
+            <Icon name="article" size={60} color={theme.textSecondary} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                No Diary Entries
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                No diaries found for today. Create your first diary entry by tapping the + button
+            </Text>
+            <TouchableOpacity
+                style={[styles.emptyButton, { backgroundColor: theme.primary }]}
+                onPress={handleCreateDiary}
+            >
+                <Icon name="add" size={20} color="#FFF" />
+                <Text style={styles.emptyButtonText}>Create Diary</Text>
+            </TouchableOpacity>
+        </View>
+    ), [theme, handleCreateDiary]);
+
+    // Memoize render item
+    const renderItem = useCallback(({ item }) => (
+        <DiaryCard 
+            entry={item} 
+            theme={theme} 
+            onPress={() => handleEditDiary(item)} 
+        />
+    ), [theme, handleEditDiary]);
+
+    // Memoize key extractor
+    const keyExtractor = useCallback((item) => item.id?.toString() || Math.random().toString(), []);
+
+    const totalCount = diariesData?.data?.count || 0;
+    const showClearButton = appliedFilters.classId || 
+                           appliedFilters.sectionIds?.length > 0 || 
+                           appliedFilters.subjectId || 
+                           (appliedFilters.dateFrom !== todayStart || appliedFilters.dateTo !== todayEnd);
+
+    if (isLoading && !refreshing) {
+        return (
+            <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                    Loading today's diaries...
+                </Text>
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { backgroundColor: theme.card }]}>
+                <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Icon name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: theme.text }]}>Today's Diaries</Text>
+                <View style={{ width: 40 }} />
+            </View>
+
+            {/* Filter Bar */}
+            <DiaryFilterBar
+                filters={filters}
+                setFilters={setFilters}
+                onApply={handleApplyFilters}
+                onReset={handleResetFilters}
+                classesData={classesData}
+            />
+
+            {/* Results Count */}
+            {!isLoading && (
+                <View style={[styles.resultsBar, { backgroundColor: theme.card }]}>
+                    <Text style={[styles.resultsText, { color: theme.textSecondary }]}>
+                        {totalCount} {totalCount === 1 ? 'entry' : 'entries'} for today
+                    </Text>
+                    {showClearButton && (
+                        <TouchableOpacity onPress={handleResetFilters} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <Text style={[styles.clearText, { color: theme.primary }]}>Show Today</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
+
+            {/* Diary List */}
+            <FlatList
+                data={transformedEntries}
+                renderItem={renderItem}
+                keyExtractor={keyExtractor}
+                contentContainerStyle={styles.listContent}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={onRefresh} 
+                        colors={[theme.primary]} 
+                        tintColor={theme.primary}
+                    />
+                }
+                ListEmptyComponent={renderEmptyState}
+                showsVerticalScrollIndicator={false}
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={10}
+                removeClippedSubviews={Platform.OS === 'android'}
+                updateCellsBatchingPeriod={50}
+            />
+
+            {/* FAB Button */}
+            <TouchableOpacity
+                style={[styles.fab, { backgroundColor: theme.primary }]}
+                onPress={handleCreateDiary}
+                activeOpacity={0.8}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+                <Icon name="add" size={28} color="#FFF" />
+            </TouchableOpacity>
+        </View>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    resultsBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginHorizontal: 16,
+        marginTop: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+    },
+    resultsText: {
+        fontSize: 13,
+    },
+    clearText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    listContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 80,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 60,
+        marginHorizontal: 16,
+        borderRadius: 16,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 20,
+        paddingHorizontal: 40,
+    },
+    emptyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        gap: 8,
+    },
+    emptyButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    fab: {
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+});
+
+export default TeacherDiaryListScreen;
