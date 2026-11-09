@@ -1,4 +1,10 @@
-# School Management — Mobile and backend
+# School Management Mobile App | Expo, React Native, Firebase
+
+Mobile school administration application using Expo/React Native with backend services and Firebase messaging integration for school workflows.
+
+**Explore this repository:** [Architecture](docs/ARCHITECTURE.md) · [Developer runbook](docs/RUNBOOK.md) · [Screenshot evidence guide](docs/SCREENSHOT_GUIDE.md) · [Audit](docs/PORTFOLIO_AUDIT.md)
+
+**Discoverability topics:** `school-management` · `react-native` · `expo` · `education` · `firebase` · `mobile-app`. These are suggested GitHub repository topics, not a claim that the repository settings have been updated.
 
 > **Verification status:** Documentation derived from inspected repository files. Application execution and screenshots have not yet been verified.
 
