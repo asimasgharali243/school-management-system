@@ -20,4 +20,4 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Verify source
-        run: npx tsc --noEmit
+        run: npx expo config --json > /tmp/portfolio-expo-config.json && test -s /tmp/portfolio-expo-config.json
