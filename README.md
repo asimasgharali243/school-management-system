@@ -23,3 +23,10 @@ Use an isolated development database and synthetic records. Keep credentials, de
 ## Ownership and contributions
 
 Existing author, template, asset and dependency attributions remain in place. Follow any existing license files; this documentation update does not grant a new license. For a change, describe the affected workflow, configuration and checks so it can be reviewed without guessing.
+
+
+## Application screenshot
+
+![School administration login](docs/images/school-admin-login.jpg)
+
+Captured from this repository’s React administration client running locally. Authentication, school records and mobile workflows were not exercised.
