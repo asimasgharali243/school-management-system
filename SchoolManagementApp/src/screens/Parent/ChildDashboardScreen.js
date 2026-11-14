@@ -298,19 +298,11 @@
 //     };
 
 //     const handleViewHomework = () => {
-//         navigation.navigate('ChildHomework', {
-//             childId,
-//             childName,
-//             childData: childInfo
-//         });
+//         Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
 //     };
 
 //     const handleViewReports = () => {
-//         navigation.navigate('ChildReports', {
-//             childId,
-//             childName,
-//             childData: childInfo
-//         });
+//         Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
 //     };
 
 //     if (loading || gradesLoading || attendanceLoading || diaryLoading) {
@@ -1389,11 +1381,7 @@ const ChildDashboardScreen = ({ route, navigation }) => {
   }, [navigation, childId, childName, childInfo]);
 
   const handleViewHomework = useCallback(() => {
-    navigation.navigate("ChildHomework", {
-      childId,
-      childName,
-      childData: childInfo,
-    });
+    Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
   }, [navigation, childId, childName, childInfo]);
 
   const handleViewFeeLedger = () => {
@@ -1405,11 +1393,7 @@ const ChildDashboardScreen = ({ route, navigation }) => {
   };
 
   const handleViewReports = useCallback(() => {
-    navigation.navigate("ChildReports", {
-      childId,
-      childName,
-      childData: childInfo,
-    });
+    Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
   }, [navigation, childId, childName, childInfo]);
 
   // Loading state

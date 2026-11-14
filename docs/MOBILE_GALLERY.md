@@ -1,327 +1,310 @@
-# School app component gallery
+# Mobile gallery by role
 
-33 phone-size component previews from the repository’s React Native source. [Web portal gallery](WEB_GALLERY.md) · [Gallery overview](SCREEN_GUIDE.md).
+This replaces the earlier source-component inventory with **only screen components registered in the Admin, Teacher and Parent navigators**. Unused Default/Home/Classes/Attendance prototypes are excluded. Shared aliases and navigator containers are not counted twice.
 
-## What these images establish
+**Capture limits:** these are role-specific React Native Web UI previews at phone size, not native Android/iOS captures. The preview imports the exact published role resolver, restricts screen selection to each navigator’s registered components, and supplies separate synthetic Admin/Teacher/Parent identities. Native navigation containers, query/storage/notification modules and native widgets are adapted. Actual root navigator selection and auth thunk/reducer behavior were separately checked with React test rendering and mocked API/storage—not with a live school server.
 
-**These are browser-rendered component previews, not Android or iOS device screenshots.** The actual screen components were rendered with React Native Web at a 390 × 844 viewport. A temporary local harness supplied synthetic state/query fixtures, a navigation adapter and native-module adapters. The app’s original icon fonts were used. Every image includes a COMPONENT PREVIEW banner.
+## Role selection
 
-The harness was not published as application source. It does not establish a successful Expo/native build, live role-based navigation, API authentication, record persistence, push delivery, native date/picker behavior, camera access, PDF creation, sharing, biometric access or rich-editor/WebView parity. Native tab/picker/navigation integrations were adapted for this browser preview.
-
-Several source components already contain hardcoded prototype/sample counters, names and academic results. Those values remain illustrative; the screenshots do not turn them into verified school records. Empty list/history states are shown where no query fixture was supplied. No real child/student information was used.
-
-## Teacher workflow
-
-In a configured app: sign in as a teacher → review Teacher Dashboard/My Classes → open the roster → select attendance, grades or diaries → review the result after saving through the backend. This gallery inspects the UI layouts only; it does not claim saved attendance, grades or diaries.
-
-## Parent workflow
-
-In a configured app: sign in as a parent → select a linked child → review attendance, grades, diary, fees, complaints and notices. Child/account linking and backend data loading require a separate integration test.
-
-## Screen index
-
-| Screen | Purpose |
+| Account | Landing screen |
 |---|---|
-| [Attendance overview prototype](#attendance-overview-prototype) | `Attendance/AttendanceScreen` |
-| [Classes overview prototype](#classes-overview-prototype) | `Classes/ClassesScreen` |
-| [Default dashboard prototype](#default-dashboard-prototype) | `Default/DashboardScreen` |
-| [Password recovery placeholder](#password-recovery-placeholder) | `ForgotPasswordScreen` |
-| [Home overview](#home-overview) | `Home/HomeScreen` |
-| [Loading state](#loading-state) | `LoadingScreen` |
-| [Mobile sign in](#mobile-sign-in) | `LoginScreen` |
-| [Notification details](#notification-details) | `Notifications/NotificationDetailScreen` |
-| [Notification inbox](#notification-inbox) | `Notifications/NotificationsScreen` |
-| [Child attendance history](#child-attendance-history) | `Parent/ChildAttendanceScreen` |
-| [Child dashboard](#child-dashboard) | `Parent/ChildDashboardScreen` |
-| [Child details prototype](#child-details-prototype) | `Parent/ChildDetailsScreen` |
-| [Child diary](#child-diary) | `Parent/ChildDiaryScreen` |
-| [Child grades](#child-grades) | `Parent/ChildGradesScreen` |
-| [Parent children list](#parent-children-list) | `Parent/ChildrenListScreen` |
-| [Class diary and scheme of work](#class-diary-and-scheme-of-work) | `Parent/ClassDiaryAndSowScreen` |
-| [Complaint details](#complaint-details) | `Parent/ComplaintDetailScreen` |
-| [Complaint list](#complaint-list) | `Parent/ComplaintListScreen` |
-| [Create complaint](#create-complaint) | `Parent/CreateComplaintScreen` |
-| [Diary details](#diary-details) | `Parent/DiaryDetailScreen` |
-| [Student fee ledger](#student-fee-ledger) | `Parent/StudentFeeLedgerScreen` |
-| [Profile](#profile) | `Profile/ProfileScreen` |
-| [Settings](#settings) | `Settings/SettingsScreen` |
-| [Teacher attendance report](#teacher-attendance-report) | `Teacher/AttendanceReportScreen` |
-| [Attendance management](#attendance-management) | `Teacher/AttendanceScreen` |
-| [Class student roster](#class-student-roster) | `Teacher/ClassStudentsScreen` |
-| [Teacher classes](#teacher-classes) | `Teacher/ClassesScreen` |
-| [Create diary](#create-diary) | `Teacher/CreateDiaryScreen` |
-| [Grades management prototype](#grades-management-prototype) | `Teacher/GradesScreen` |
-| [Mark attendance](#mark-attendance) | `Teacher/MarkAttendanceScreen` |
-| [Student details prototype](#student-details-prototype) | `Teacher/StudentDetailsScreen` |
-| [Teacher dashboard](#teacher-dashboard) | `Teacher/TeacherDashboard` |
-| [Teacher diary list](#teacher-diary-list) | `Teacher/TeacherDiaryListScreen` |
+| Admin / Administrator / Super Admin role name | AdminDashboard |
+| Teacher role name or API role ID 3, including string IDs | TeacherDashboard |
+| Parent role name or API role ID 4, including string IDs | ChildrenList |
+| Missing, unsupported or conflicting role | Access not configured, with Refresh account and Sign out |
 
-## Screen previews
+Unrecognized numeric administrative IDs are not guessed. The API response must identify an administrative role by name. Frontend routing does not replace server authorization.
 
-### Attendance overview prototype
+## Shared sign in
 
-Shows the source’s built-in example attendance totals and recent records. These hardcoded values are illustrative, not live attendance.
+<img src="images/mobile/LoginScreen.png" width="390" alt="Shared mobile sign-in source preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Attendance/AttendanceScreen.js)
+## Admin — 5 registered screen views
 
-<img src="images/mobile/Attendance-AttendanceScreen.png" width="390" alt="Attendance overview prototype — source component preview with synthetic data" />
+A dedicated Admin navigator/landing screen was added because the original app had no Admin navigator. It supports the existing shared notification/profile/settings areas; it does not invent completed mobile administrative editors.
 
-### Classes overview prototype
+### Admin: AdminDashboard
 
-Displays the source’s built-in example timetable/class cards. Use class cards to explore class information in a configured app; preview cards do not prove backend class synchronization.
+Administrator landing area with account notifications, profile and settings. The supplied app has no mobile school-record editors; use the configured web portal for those workflows.
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Classes/ClassesScreen.js)
+**Component:** `Admin/AdminDashboardScreen.js`
 
-<img src="images/mobile/Classes-ClassesScreen.png" width="390" alt="Classes overview prototype — source component preview with synthetic data" />
+<img src="images/roles/admin-AdminDashboard.png" width="390" alt="Admin role — AdminDashboard synthetic UI preview" />
 
-### Default dashboard prototype
+### Admin: Notifications
 
-Presents the source’s generic dashboard shortcuts and sample counters. It is distinct from the teacher-specific dashboard.
+Review notices for the signed-in account. The empty inbox uses synthetic preview state; delivery and read-state persistence are not verified.
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Default/DashboardScreen.js)
+**Component:** `Notifications/NotificationsScreen.js`
 
-<img src="images/mobile/Default-DashboardScreen.png" width="390" alt="Default dashboard prototype — source component preview with synthetic data" />
+<img src="images/roles/admin-Notifications.png" width="390" alt="Admin role — Notifications synthetic UI preview" />
 
-### Password recovery placeholder
+### Admin: NotificationDetail
 
-Provides the supplied recovery entry screen and a return-to-login button. Recovery delivery is not implemented or tested by this capture.
+Read the selected synthetic notice and view the acknowledgement control. No acknowledgement request was submitted.
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/ForgotPasswordScreen.js)
+**Component:** `Notifications/NotificationDetailScreen.js`
 
-<img src="images/mobile/ForgotPasswordScreen.png" width="390" alt="Password recovery placeholder — source component preview with synthetic data" />
+<img src="images/roles/admin-NotificationDetail.png" width="390" alt="Admin role — NotificationDetail synthetic UI preview" />
 
-### Home overview
+### Admin: AdminProfile
 
-Provides school overview cards and student-related entry points. Some counters in the source are illustrative; this preview does not verify school statistics.
+View the administrator account profile. The displayed account is synthetic; profile updates were not submitted.
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Home/HomeScreen.js)
+**Component:** `Profile/ProfileScreen.js`
 
-<img src="images/mobile/Home-HomeScreen.png" width="390" alt="Home overview — source component preview with synthetic data" />
+<img src="images/roles/admin-AdminProfile.png" width="390" alt="Admin role — AdminProfile synthetic UI preview" />
 
-### Loading state
+### Admin: AdminSettings
 
-Displays the application’s transitional loading indicator. This is intentionally a loading screen, not a completed data page.
+View app/account preferences as an administrator. Unimplemented actions now report that they are unavailable instead of navigating to nonexistent screens.
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/LoadingScreen.js)
+**Component:** `Settings/SettingsScreen.js`
 
-<img src="images/mobile/LoadingScreen.png" width="390" alt="Loading state — source component preview with synthetic data" />
+<img src="images/roles/admin-AdminSettings.png" width="390" alt="Admin role — AdminSettings synthetic UI preview" />
 
-### Mobile sign in
+## Teacher — 14 registered screen views
 
-Enter a configured username/password and use Login; Forgot Password opens the recovery entry. Login persistence and native authentication are not tested in this component preview.
+### Teacher: TeacherDashboard
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/LoginScreen.js)
+Teacher landing screen with the teacher’s synthetic class/subject assignment and classroom shortcuts.
 
-<img src="images/mobile/LoginScreen.png" width="390" alt="Mobile sign in — source component preview with synthetic data" />
+**Component:** `Teacher/TeacherDashboard.js`
 
-### Notification details
+<img src="images/roles/teacher-TeacherDashboard.png" width="390" alt="Teacher role — TeacherDashboard synthetic UI preview" />
 
-Read a selected notice and find the acknowledgement control. The displayed notice is synthetic; acknowledgement and native push delivery were not executed.
+### Teacher: TeacherClasses
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Notifications/NotificationDetailScreen.js)
+Review the teacher’s assigned classes and sections; select a class to continue to its roster.
 
-<img src="images/mobile/Notifications-NotificationDetailScreen.png" width="390" alt="Notification details — source component preview with synthetic data" />
+**Component:** `Teacher/ClassesScreen.js`
 
-### Notification inbox
+<img src="images/roles/teacher-TeacherClasses.png" width="390" alt="Teacher role — TeacherClasses synthetic UI preview" />
 
-Review notices and pull to refresh. The empty state here uses synthetic preview data, not a checked production inbox.
+### Teacher: TeacherAttendance
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Notifications/NotificationsScreen.js)
+Choose a class and enter the attendance workflow. This is a synthetic UI preview, not a saved attendance transaction.
 
-<img src="images/mobile/Notifications-NotificationsScreen.png" width="390" alt="Notification inbox — source component preview with synthetic data" />
+**Component:** `Teacher/AttendanceScreen.js`
 
-### Child attendance history
+<img src="images/roles/teacher-TeacherAttendance.png" width="390" alt="Teacher role — TeacherAttendance synthetic UI preview" />
 
-Lets a parent review attendance totals/history and date filters. The displayed empty-state percentages are not an actual student record.
+### Teacher: TeacherProfile
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildAttendanceScreen.js)
+View the teacher account profile. The screenshot uses a Teacher account, not an unassigned/default account.
 
-<img src="images/mobile/Parent-ChildAttendanceScreen.png" width="390" alt="Child attendance history — source component preview with synthetic data" />
+**Component:** `Profile/ProfileScreen.js`
 
-### Child dashboard
+<img src="images/roles/teacher-TeacherProfile.png" width="390" alt="Teacher role — TeacherProfile synthetic UI preview" />
 
-Provides attendance, grades, diary and other child-specific entry points. The selected child is synthetic and query results use empty preview states.
+### Teacher: Notifications
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildDashboardScreen.js)
+Review notices for the signed-in account. The empty inbox uses synthetic preview state; delivery and read-state persistence are not verified.
 
-<img src="images/mobile/Parent-ChildDashboardScreen.png" width="390" alt="Child dashboard — source component preview with synthetic data" />
+**Component:** `Notifications/NotificationsScreen.js`
 
-### Child details prototype
+<img src="images/roles/teacher-Notifications.png" width="390" alt="Teacher role — Notifications synthetic UI preview" />
 
-Displays the overview portion of the child detail component. The source contains hardcoded sample identity fields and placeholder tabs; native tab navigation is not tested.
+### Teacher: TeacherSettings
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildDetailsScreen.js)
+View teacher app preferences. Missing feature routes now show an explicit availability message.
 
-<img src="images/mobile/Parent-ChildDetailsScreen.png" width="390" alt="Child details prototype — source component preview with synthetic data" />
+**Component:** `Settings/SettingsScreen.js`
 
-### Child diary
+<img src="images/roles/teacher-TeacherSettings.png" width="390" alt="Teacher role — TeacherSettings synthetic UI preview" />
 
-Supports date navigation, subject/teacher search and diary viewing. The empty state does not verify diary synchronization, PDF export or sharing.
+### Teacher: NotificationDetail
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildDiaryScreen.js)
+Read the selected synthetic notice and view the acknowledgement control. No acknowledgement request was submitted.
 
-<img src="images/mobile/Parent-ChildDiaryScreen.png" width="390" alt="Child diary — source component preview with synthetic data" />
+**Component:** `Notifications/NotificationDetailScreen.js`
 
-### Child grades
+<img src="images/roles/teacher-NotificationDetail.png" width="390" alt="Teacher role — NotificationDetail synthetic UI preview" />
 
-Provides grade history and summary entry points for the selected child. No grade records are supplied in this preview.
+### Teacher: ClassStudents
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildGradesScreen.js)
+Review two synthetic students in Grade 5 A. Student data is not from a real school database.
 
-<img src="images/mobile/Parent-ChildGradesScreen.png" width="390" alt="Child grades — source component preview with synthetic data" />
+**Component:** `Teacher/ClassStudentsScreen.js`
 
-### Parent children list
+<img src="images/roles/teacher-ClassStudents.png" width="390" alt="Teacher role — ClassStudents synthetic UI preview" />
 
-Lists children linked to a parent account and opens each child’s dashboard. The preview shows the no-children state; family matching is not verified.
+### Teacher: StudentDetails
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ChildrenListScreen.js)
+Inspect the student detail layout and quick actions. This component still contains source-defined mock academic/contact data; it is not a live student report.
 
-<img src="images/mobile/Parent-ChildrenListScreen.png" width="390" alt="Parent children list — source component preview with synthetic data" />
+**Component:** `Teacher/StudentDetailsScreen.js`
 
-### Class diary and scheme of work
+<img src="images/roles/teacher-StudentDetails.png" width="390" alt="Teacher role — StudentDetails synthetic UI preview" />
 
-Switch between diary and scheme-of-work views and choose a date. Native date picking, PDF conversion and sharing remain untested.
+### Teacher: MarkAttendance
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ClassDiaryAndSowScreen.js)
+Choose P, A or L for a roster entry and access remarks/late controls. No attendance was saved; this screenshot does not prove backend persistence.
 
-<img src="images/mobile/Parent-ClassDiaryAndSowScreen.png" width="390" alt="Class diary and scheme of work — source component preview with synthetic data" />
+**Component:** `Teacher/MarkAttendanceScreen.js`
 
-### Complaint details
+<img src="images/roles/teacher-MarkAttendance.png" width="390" alt="Teacher role — MarkAttendance synthetic UI preview" />
 
-Review a complaint’s status, priority, subject, details, student information and timeline. The displayed complaint is explicitly synthetic.
+### Teacher: AttendanceReport
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ComplaintDetailScreen.js)
+Inspect class/month attendance report controls. The preview does not supply a measured attendance history.
 
-<img src="images/mobile/Parent-ComplaintDetailScreen.png" width="390" alt="Complaint details — source component preview with synthetic data" />
+**Component:** `Teacher/AttendanceReportScreen.js`
 
-### Complaint list
+<img src="images/roles/teacher-AttendanceReport.png" width="390" alt="Teacher role — AttendanceReport synthetic UI preview" />
 
-Review a child’s complaints and open the create/detail screens. The screenshot shows the no-complaints state.
+### Teacher: Grades
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/ComplaintListScreen.js)
+Inspect grade-entry controls. The original component still uses built-in mock grades; grade persistence has not been implemented or verified by this change.
 
-<img src="images/mobile/Parent-ComplaintListScreen.png" width="390" alt="Complaint list — source component preview with synthetic data" />
+**Component:** `Teacher/GradesScreen.js`
 
-### Create complaint
+<img src="images/roles/teacher-Grades.png" width="390" alt="Teacher role — Grades synthetic UI preview" />
 
-Prepare a category, subject and detailed complaint for a selected child. This is a form preview only; no complaint was submitted.
+### Teacher: TeacherDiaryList
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/CreateComplaintScreen.js)
+Inspect the teacher’s diary list and filter controls. The screenshot shows an empty fixture list.
 
-<img src="images/mobile/Parent-CreateComplaintScreen.png" width="390" alt="Create complaint — source component preview with synthetic data" />
+**Component:** `Teacher/TeacherDiaryListScreen.js`
 
-### Diary details
+<img src="images/roles/teacher-TeacherDiaryList.png" width="390" alt="Teacher role — TeacherDiaryList synthetic UI preview" />
 
-Shows a diary date, publication status, subject, teacher and HTML lesson content. A browser iframe adapter renders the synthetic HTML; this does not verify the native WebView.
+### Teacher: CreateDiary
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/DiaryDetailScreen.js)
+Prepare class/sections, subject and diary content. Native rich editing, camera/upload and publication are unverified; the browser uses a text-input adapter for the native editor.
 
-<img src="images/mobile/Parent-DiaryDetailScreen.png" width="390" alt="Diary details — source component preview with synthetic data" />
+**Component:** `Teacher/CreateDiaryScreen.js`
 
-### Student fee ledger
+<img src="images/roles/teacher-CreateDiary.png" width="390" alt="Teacher role — CreateDiary synthetic UI preview" />
 
-Review fee-ledger balances, transaction details and export controls. The zero/empty fixture is not a verified financial statement; native PDF/share features were not invoked.
+## Parent — 15 registered screen views
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Parent/StudentFeeLedgerScreen.js)
+### Parent: ChildDashboard
 
-<img src="images/mobile/Parent-StudentFeeLedgerScreen.png" width="390" alt="Student fee ledger — source component preview with synthetic data" />
+Review the selected child’s dashboard and workflow entry points. Unsupported Homework/Reports destinations now show an availability message rather than dispatching a missing route.
 
-### Profile
+**Component:** `Parent/ChildDashboardScreen.js`
 
-Inspect personal details and profile preferences. The profile is a synthetic teacher; no profile update was submitted.
+<img src="images/roles/parent-ChildDashboard.png" width="390" alt="Parent role — ChildDashboard synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Profile/ProfileScreen.js)
+### Parent: ChildAttendance
 
-<img src="images/mobile/Profile-ProfileScreen.png" width="390" alt="Profile — source component preview with synthetic data" />
+Inspect a child’s attendance totals/history and filters in an empty fixture state.
 
-### Settings
+**Component:** `Parent/ChildAttendanceScreen.js`
 
-Provides account, notification, appearance and other preference entry points. Native device settings, biometric options and password changes are not verified.
+<img src="images/roles/parent-ChildAttendance.png" width="390" alt="Parent role — ChildAttendance synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Settings/SettingsScreen.js)
+### Parent: ChildGrades
 
-<img src="images/mobile/Settings-SettingsScreen.png" width="390" alt="Settings — source component preview with synthetic data" />
+Inspect child grade history and filters. The missing GradeReportDetail destination now produces an availability message; PDF generation remains unverified.
 
-### Teacher attendance report
+**Component:** `Parent/ChildGradesScreen.js`
 
-Choose a month and inspect attendance history for the class. The empty history does not establish backend report correctness.
+<img src="images/roles/parent-ChildGrades.png" width="390" alt="Parent role — ChildGrades synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/AttendanceReportScreen.js)
+### Parent: ChildDiary
 
-<img src="images/mobile/Teacher-AttendanceReportScreen.png" width="390" alt="Teacher attendance report — source component preview with synthetic data" />
+Inspect diary date navigation and subject/teacher search. The query state is empty; no school diary was fetched.
 
-### Attendance management
+**Component:** `Parent/ChildDiaryScreen.js`
 
-Choose a class and enter attendance-related workflows. The assignment shown is a preview fixture, not a backend authorization test.
+<img src="images/roles/parent-ChildDiary.png" width="390" alt="Parent role — ChildDiary synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/AttendanceScreen.js)
+### Parent: DiaryDetail
 
-<img src="images/mobile/Teacher-AttendanceScreen.png" width="390" alt="Attendance management — source component preview with synthetic data" />
+Read a synthetic diary entry. Browser HTML rendering substitutes for the native WebView and does not establish native parity.
 
-### Class student roster
+**Component:** `Parent/DiaryDetailScreen.js`
 
-Displays students for a chosen class/section. Two synthetic students demonstrate the roster layout; no real enrollment information is used.
+<img src="images/roles/parent-DiaryDetail.png" width="390" alt="Parent role — DiaryDetail synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/ClassStudentsScreen.js)
+### Parent: StudentFeeLedger
 
-<img src="images/mobile/Teacher-ClassStudentsScreen.png" width="390" alt="Class student roster — source component preview with synthetic data" />
+Inspect the child’s fee-ledger layout. Zero/empty fixtures are not verified financial records; no export or financial transaction occurred.
 
-### Teacher classes
+**Component:** `Parent/StudentFeeLedgerScreen.js`
 
-Lists the teacher’s assigned classes and sections. Select a class in a configured app to continue to students or attendance.
+<img src="images/roles/parent-StudentFeeLedger.png" width="390" alt="Parent role — StudentFeeLedger synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/ClassesScreen.js)
+### Parent: ChildrenList
 
-<img src="images/mobile/Teacher-ClassesScreen.png" width="390" alt="Teacher classes — source component preview with synthetic data" />
+Parent landing screen listing two synthetic linked children. Each child card exposes the child-specific workflows; live family/account linking is not tested.
 
-### Create diary
+**Component:** `Parent/ChildrenListScreen.js`
 
-Prepare class/sections, subject and diary content. The browser preview substitutes a plain text input for the native rich editor; image capture, uploads, publication and native editor fidelity are not tested.
+<img src="images/roles/parent-ChildrenList.png" width="390" alt="Parent role — ChildrenList synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/CreateDiaryScreen.js)
+### Parent: Profile
 
-<img src="images/mobile/Teacher-CreateDiaryScreen.png" width="390" alt="Create diary — source component preview with synthetic data" />
+Inspect the parent account’s profile. The screenshot now uses a Parent identity. Logout clears persisted local session keys and returns through the root authentication switch.
 
-### Grades management prototype
+**Component:** `Profile/ProfileScreen.js`
 
-Provides class/subject selection and grade entry controls. The source populates built-in mock grades after a delay; numbers here are illustrative.
+<img src="images/roles/parent-Profile.png" width="390" alt="Parent role — Profile synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/GradesScreen.js)
+### Parent: Settings
 
-<img src="images/mobile/Teacher-GradesScreen.png" width="390" alt="Grades management prototype — source component preview with synthetic data" />
+Inspect parent preferences. Unsupported features report their availability explicitly.
 
-### Mark attendance
+**Component:** `Settings/SettingsScreen.js`
 
-Review the roster and choose P (present), A (absent) or L (leave), with related remarks/late controls. Two synthetic students are shown; no attendance was submitted or persisted.
+<img src="images/roles/parent-Settings.png" width="390" alt="Parent role — Settings synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/MarkAttendanceScreen.js)
+### Parent: Notifications
 
-<img src="images/mobile/Teacher-MarkAttendanceScreen.png" width="390" alt="Mark attendance — source component preview with synthetic data" />
+Review notices for the signed-in account. The empty inbox uses synthetic preview state; delivery and read-state persistence are not verified.
 
-### Student details prototype
+**Component:** `Notifications/NotificationsScreen.js`
 
-Shows profile, grade/attendance summaries and quick actions. The component itself supplies mock family/contact/academic values; this is not live student information.
+<img src="images/roles/parent-Notifications.png" width="390" alt="Parent role — Notifications synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/StudentDetailsScreen.js)
+### Parent: NotificationDetail
 
-<img src="images/mobile/Teacher-StudentDetailsScreen.png" width="390" alt="Student details prototype — source component preview with synthetic data" />
+Read the selected synthetic notice and view the acknowledgement control. No acknowledgement request was submitted.
 
-### Teacher dashboard
+**Component:** `Notifications/NotificationDetailScreen.js`
 
-Shows assigned classes/subjects and shortcuts to classroom workflows. One synthetic Grade 5 A Mathematics assignment is supplied by the preview fixture.
+<img src="images/roles/parent-NotificationDetail.png" width="390" alt="Parent role — NotificationDetail synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/TeacherDashboard.js)
+### Parent: ClassDiaryAndSow
 
-<img src="images/mobile/Teacher-TeacherDashboard.png" width="390" alt="Teacher dashboard — source component preview with synthetic data" />
+Review class diary/scheme-of-work tabs and date controls. Native date picking, PDF/share and backend loading remain unverified.
 
-### Teacher diary list
+**Component:** `Parent/ClassDiaryAndSowScreen.js`
 
-Review diary entries and filter the list; the preview shows no entries. Backend load/filter persistence is not verified.
+<img src="images/roles/parent-ClassDiaryAndSow.png" width="390" alt="Parent role — ClassDiaryAndSow synthetic UI preview" />
 
-[Source component](https://github.com/asimasgharali243/school-management-system/blob/main/SchoolManagementApp/src/screens/Teacher/TeacherDiaryListScreen.js)
+### Parent: ComplaintList
 
-<img src="images/mobile/Teacher-TeacherDiaryListScreen.png" width="390" alt="Teacher diary list — source component preview with synthetic data" />
+Inspect the child’s complaint list in its empty state.
 
-## Source coverage limits
+**Component:** `Parent/ComplaintListScreen.js`
 
-The index covers source files containing an active default-exported screen component, excluding helper components. It is a source-component inventory, not a claim that every listed prototype is reachable in the app navigators. `Parent/AllGradesScreen.js` and `Students/StudentsScreen.js` do not provide an active exported screen in the reviewed source and have no invented screenshot. OS permission prompts, hardware interactions, native file dialogs and all error/confirmation states are outside this gallery.
+<img src="images/roles/parent-ComplaintList.png" width="390" alt="Parent role — ComplaintList synthetic UI preview" />
+
+### Parent: CreateComplaint
+
+Prepare a complaint category, subject and details for the selected child. No complaint was submitted.
+
+**Component:** `Parent/CreateComplaintScreen.js`
+
+<img src="images/roles/parent-CreateComplaint.png" width="390" alt="Parent role — CreateComplaint synthetic UI preview" />
+
+### Parent: ComplaintDetail
+
+Inspect a synthetic complaint’s status, priority, student details and timeline.
+
+**Component:** `Parent/ComplaintDetailScreen.js`
+
+<img src="images/roles/parent-ComplaintDetail.png" width="390" alt="Parent role — ComplaintDetail synthetic UI preview" />
+
+## Missing or unsupported role
+
+The generic Default dashboard is no longer selected for these accounts. Refresh account reloads the server’s role metadata; Sign out clears the local session. Unknown roles are not promoted to Admin, Parent or Teacher.
+
+<img src="images/roles/unassigned-access.png" width="390" alt="Unsupported role access recovery screen" />
+
+## Checks and remaining limits
+
+See [role-routing validation](ROLE_VALIDATION.md). No live school account, real student record, backend write, Firebase/Expo delivery, native build or device feature is certified by these screenshots. Source mock grades/student details and incomplete mobile features remain explicitly identified above.

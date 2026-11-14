@@ -7,7 +7,7 @@
 // import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 
 // import { selectThemeData } from '../store/slices/themeSlice';
-// import { logout } from '../store/slices/authSlice';
+// import { logoutUser } from '../store/slices/authSlice';
 // import NotificationHeader from '../components/NotificationHeader';
 
 // // ✅ Import ALL Teacher screens
@@ -43,7 +43,7 @@
 //                     text: 'Logout',
 //                     style: 'destructive',
 //                     onPress: () => {
-//                         dispatch(logout());
+//                         dispatch(logoutUser());
 //                     }
 //                 }
 //             ]
@@ -377,7 +377,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 
 import { selectThemeData } from '../store/slices/themeSlice';
-import { logout } from '../store/slices/authSlice';
+import { logoutUser } from '../store/slices/authSlice';
 import NotificationHeader from '../components/NotificationHeader';
 import NotificationDetailScreen from '../screens/Notifications/NotificationDetailScreen';
 import NotificationHandler from '../components/NotificationHandler';
@@ -420,7 +420,7 @@ const CustomDrawerContent = (props) => {
                     text: 'Logout',
                     style: 'destructive',
                     onPress: () => {
-                        dispatch(logout());
+                        dispatch(logoutUser());
                     }
                 }
             ]
@@ -715,7 +715,8 @@ const TeacherNavigator = () => {
     component={CreateDiaryScreen} 
     options={{ headerShown: false }} 
 />
-        </Stack.Navigator>
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{title:"Profile"}} />
+</Stack.Navigator>
     );
 };
 

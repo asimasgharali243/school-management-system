@@ -13,7 +13,7 @@
     "web": "expo start --web",
     "build:android": "eas build -p android",
     "build:ios": "eas build -p ios",
-    "prestart": "expo prestart"
+    "test:roles": "node --test tests/roles.test.mjs"
   },
   "dependencies": {
     "@notifee/react-native": "^7.7.1",

@@ -6,7 +6,7 @@ School administration across an ASP.NET Core backend, a React/Vite web portal an
 
 - **API:** `school-management-Backend/`. Install the matching .NET SDK from its `.csproj`, configure a compatible private SQL database and run `dotnet run --project school-management-Backend/school-management-Backend.csproj`.
 - **Admin portal:** `materially-free-react-admin-template-1.0.0/`. Run `npm ci` and `npm start`; configure the API endpoint locally.
-- **Mobile:** `SchoolManagementApp/`. Install the package's Expo/native dependencies. Use `npx expo start` for the development server, or the package's Android/iOS scripts with the required native tools. Review the existing `prestart` script before relying on `npm start`.
+- **Mobile:** `SchoolManagementApp/`. Install the package's Expo/native dependencies. Use `npx expo start` for the development server, or the package's Android/iOS scripts with the required native tools. The invalid legacy `prestart` lifecycle command was removed; use `npx expo start` or `npm start`.
 
 Use synthetic student/teacher records for demonstrations. Do not publish student profiles, attendance records, credentials or notification keys. Push delivery, permissions, data migrations and role access require a representative test environment.
 
@@ -31,10 +31,15 @@ Browse the **[gallery overview](docs/SCREEN_GUIDE.md)**, **[web portal gallery](
 
 ![Web notification dashboard preview](docs/images/web/02-dashboard.png)
 
-<img src="docs/images/mobile/LoginScreen.png" width="260" alt="School app sign-in component preview" /> <img src="docs/images/mobile/Teacher-TeacherDashboard.png" width="260" alt="Teacher dashboard component preview" /> <img src="docs/images/mobile/Teacher-MarkAttendanceScreen.png" width="260" alt="Attendance component preview" />
+<img src="docs/images/mobile/LoginScreen.png" width="260" alt="School app sign-in component preview" /> <img src="docs/images/roles/teacher-TeacherDashboard.png" width="260" alt="Teacher dashboard component preview" /> <img src="docs/images/roles/teacher-MarkAttendance.png" width="260" alt="Attendance component preview" />
 
 - **13 web views:** actual React/Vite screens with isolated local fixture responses, including the five rule-wizard steps.
-- **33 mobile component previews:** actual React Native screen components rendered in a phone-size browser with synthetic state and native adapters. These are **not native Android/iOS screenshots**.
+- **Role-specific mobile gallery:** Admin 5, Teacher 14 and Parent 15 registered screen views, plus shared sign-in and access recovery, rendered with matching synthetic role identities and native adapters. These are **not native Android/iOS screenshots**.
 - **Honest scope:** the current web portal focuses on notifications and retains Task Management branding. Templates and Settings are placeholders; the User Management component is commented out. Several mobile components contain built-in mock values. The guides identify these limits.
 
 No real student data, live notification delivery or saved school transaction was used to produce the gallery. Backend authentication/persistence and native device features require separate validation.
+
+
+## Mobile role routing
+
+Admin, Teacher and Parent now select dedicated navigators across supported API field/type variants. Missing or conflicting roles show an access-recovery screen instead of the unused Default dashboard. Login/restore metadata normalization, persisted logout, profile route aliases and absent-feature handling were corrected. See [role validation](docs/ROLE_VALIDATION.md) for 64 passing Node tests, 34 supplementary isolated checks and the remaining native/backend limits.

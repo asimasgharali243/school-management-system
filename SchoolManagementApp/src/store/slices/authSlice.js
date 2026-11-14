@@ -3,6 +3,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../config/constants';
+import { normalizeUser } from '../../utils/roles';
 
 // Try to import notification service with fallback
 let firebaseNotifications = null;
@@ -38,6 +39,7 @@ export const loginUser = createAsyncThunk(
             console.log('📤 Response status:', response.status);
 
             const data = await response.json();
+            if (data.user) data.user = normalizeUser(data.user);
             console.log('📥 Response data received:', {
                 hasToken: !!data.token,
                 tokenLength: data.token?.length,
@@ -51,6 +53,8 @@ export const loginUser = createAsyncThunk(
             }
 
             // Store tokens and user data
+            if (!data.user || !data.token) throw new Error('Invalid login response: account or token missing');
+
             console.log('💾 Storing tokens and user data...');
             await AsyncStorage.multiSet([
                 ['token', data.token],
@@ -126,11 +130,12 @@ export const validateToken = createAsyncThunk(
             });
 
             const data = await response.json();
+            if (data.user) data.user = normalizeUser(data.user);
             console.log('🔐 Validation response:', {
                 status: response.status,
                 hasUser: !!data.user,
                 hasChildren: !!(data.children && data.children.length > 0),
-                responseData: data
+                hasRole: !!data.user?.appRole
             });
 
             // FIX: Check response.ok only, not data.success
@@ -183,7 +188,7 @@ export const initializeAuth = createAsyncThunk(
             console.log('📥 Loaded from storage:', {
                 hasToken: !!token,
                 tokenLength: token?.length,
-                tokenPreview: token ? `${token.substring(0, 30)}...` : 'No token',
+                
                 hasUser: !!userStr,
                 hasChildren: !!childrenStr
             });
@@ -273,9 +278,9 @@ export const logoutUser = createAsyncThunk(
             console.log('👋 Logging out user...');
 
             // Cleanup notifications if service is available
-            if (firebaseNotifications && typeof firebaseNotifications.logoutCleanup === 'function') {
-                await firebaseNotifications.logoutCleanup();
-            }
+            try {
+                if (firebaseNotifications && typeof firebaseNotifications.logoutCleanup === 'function') await firebaseNotifications.logoutCleanup();
+            } catch (error) { console.warn('Notification cleanup failed; clearing local session anyway'); }
 
             // Clear AsyncStorage
             await AsyncStorage.multiRemove([
@@ -321,7 +326,7 @@ const authSlice = createSlice({
                 hasUser: !!user,
                 childrenCount: children?.length || 0
             });
-            state.user = user;
+            state.user = normalizeUser(user);
             state.token = token; // THIS IS CRITICAL
             state.children = children || [];
             state.isAuthenticated = !!token;
@@ -335,7 +340,7 @@ const authSlice = createSlice({
                 hasUser: !!user
             });
             state.token = token; // THIS IS CRITICAL
-            state.user = user;
+            state.user = normalizeUser(user);
             state.children = children || [];
             state.isAuthenticated = isAuthenticated;
             state.isInitialized = isInitialized !== undefined ? isInitialized : true;
@@ -379,7 +384,7 @@ const authSlice = createSlice({
             .addCase(loginUser.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
+                state.user = normalizeUser(action.payload.user);
                 state.token = action.payload.token; // THIS IS CRITICAL
                 state.children = action.payload.children || [];
                 state.isInitialized = true;
@@ -399,7 +404,7 @@ const authSlice = createSlice({
             .addCase(validateToken.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
+                state.user = normalizeUser(action.payload.user);
                 // Keep the existing token - don't overwrite it
                 state.children = action.payload.children || [];
                 state.isInitialized = true;
@@ -465,7 +470,7 @@ export const selectCurrentToken = (state) => {
     console.log('🔍 Selecting token from state:', {
         hasToken: !!state.auth.token,
         tokenLength: state.auth.token?.length,
-        tokenPreview: state.auth.token ? `${state.auth.token.substring(0, 20)}...` : 'No token'
+        
     });
     return state.auth.token;
 };

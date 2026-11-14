@@ -82,7 +82,7 @@ const SettingsScreen = ({ navigation }) => {
                     style: 'destructive',
                     onPress: () => {
                         // Implement cache clearing logic
-                        Alert.alert('Success', 'Cache cleared successfully');
+                        Alert.alert('Not available', 'Cache clearing is not implemented in this app version.');
                     }
                 },
             ]
@@ -186,7 +186,7 @@ const SettingsScreen = ({ navigation }) => {
                     icon: 'lock-reset',
                     title: 'Change Password',
                     type: 'action',
-                    onPress: () => navigation.navigate('ChangePassword'),
+                    onPress: () => Alert.alert('Not available', 'Password changes is not implemented in this app version. Contact your school administrator.'),
                 })}
 
                 {renderSettingItem({
@@ -303,7 +303,7 @@ const SettingsScreen = ({ navigation }) => {
                     title: 'Download Data',
                     description: 'Download your data for backup',
                     type: 'action',
-                    onPress: () => navigation.navigate('DownloadData'),
+                    onPress: () => Alert.alert('Not available', 'Data download is not implemented in this app version. Contact your school administrator.'),
                 })}
 
                 {renderSettingItem({
@@ -319,7 +319,7 @@ const SettingsScreen = ({ navigation }) => {
                     title: 'Export Data',
                     description: 'Export your data as PDF/Excel',
                     type: 'action',
-                    onPress: () => navigation.navigate('ExportData'),
+                    onPress: () => Alert.alert('Not available', 'Data export is not implemented in this app version. Contact your school administrator.'),
                 })}
             </View>
 
@@ -334,7 +334,7 @@ const SettingsScreen = ({ navigation }) => {
                     title: 'Help & Support',
                     description: 'Get help with the app',
                     type: 'action',
-                    onPress: () => navigation.navigate('HelpSupport'),
+                    onPress: () => Alert.alert('Not available', 'In-app support is not implemented in this app version. Contact your school administrator.'),
                 })}
 
                 {renderSettingItem({
@@ -396,7 +396,7 @@ const SettingsScreen = ({ navigation }) => {
 
                 <TouchableOpacity
                     style={[styles.dangerButton, { backgroundColor: theme.error }]}
-                    onPress={() => navigation.navigate('DeleteAccount')}
+                    onPress={() => Alert.alert('Not available', 'Account deletion is not implemented in this app version. Contact your school administrator.')}
                 >
                     <Icon name="delete" size={20} color="#FFFFFF" />
                     <Text style={styles.dangerButtonText}>Delete Account</Text>
@@ -404,7 +404,7 @@ const SettingsScreen = ({ navigation }) => {
 
                 <TouchableOpacity
                     style={[styles.dangerButton, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.error }]}
-                    onPress={() => navigation.navigate('LogoutAllDevices')}
+                    onPress={() => Alert.alert('Not available', 'Signing out other devices is not implemented in this app version. Contact your school administrator.')}
                 >
                     <Icon name="logout" size={20} color={theme.error} />
                     <Text style={[styles.dangerButtonText, { color: theme.error }]}>

@@ -15,7 +15,7 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { selectThemeData, toggleTheme } from '../../store/slices/themeSlice';
-import { selectCurrentUser, logout } from '../../store/slices/authSlice';
+import { selectCurrentUser, logoutUser } from '../../store/slices/authSlice';
 import { selectProfile, updateProfile, updateSettings } from '../../store/slices/userSlice';
 
 const ProfileScreen = ({ navigation }) => {
@@ -102,8 +102,8 @@ const ProfileScreen = ({ navigation }) => {
                     text: 'Logout',
                     style: 'destructive',
                     onPress: () => {
-                        dispatch(logout());
-                        navigation.replace('Login');
+                        dispatch(logoutUser());
+                        
                     }
                 },
             ]
@@ -364,7 +364,7 @@ const ProfileScreen = ({ navigation }) => {
                     {/* Change Password */}
                     <TouchableOpacity
                         style={styles.settingItem}
-                        onPress={() => navigation.navigate('ChangePassword')}
+                        onPress={() => Alert.alert('Change password', 'Password changes are not available in this app version. Contact your school administrator.')}
                     >
                         <View style={styles.settingInfo}>
                             <Icon name="lock-reset" size={20} color={theme.text} />

@@ -24,3 +24,8 @@ Additional visual check: Captured from this repository’s React administration 
 ## Web and mobile gallery follow-up
 
 Added 13 web screenshots and 33 React Native Web component previews, all visibly labeled as fixture/component previews. Navigated the web rule wizard without submitting a rule. No live student records, service credentials, notification delivery, registration, native mobile build or backend persistence was tested. See [gallery overview](SCREEN_GUIDE.md), [web guide](WEB_GALLERY.md) and [mobile guide](MOBILE_GALLERY.md). Web placeholder/broken routes and mobile mock components remain documented source limitations.
+
+
+## Role-routing correction
+
+The earlier mobile gallery was a component inventory, not evidence of correct role-based app navigation. It is superseded by [the role-scoped gallery](MOBILE_GALLERY.md). See [role validation](ROLE_VALIDATION.md) for the routing/auth/logout fixes, Admin navigator addition, tests and remaining implementation gaps.

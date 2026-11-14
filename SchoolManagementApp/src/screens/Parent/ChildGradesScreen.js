@@ -187,14 +187,7 @@ const ChildGradesScreen = ({ route, navigation }) => {
 
     // Handle view full report
     const handleViewReport = useCallback(() => {
-        navigation.navigate('GradeReportDetail', {
-            childId,
-            childName,
-            childClassId,
-            childSectionId,
-            childRollNo,
-            filters,
-        });
+        Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
     }, [childId, childName, childClassId, childSectionId, childRollNo, filters, navigation]);
 
     // Get grade color
@@ -1562,7 +1555,7 @@ export default ChildGradesScreen;
 //                 <View style={[styles.actionContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
 //                     <TouchableOpacity 
 //                         style={[styles.actionBtn, styles.primaryAction, { backgroundColor: theme.primary }]} 
-//                         onPress={() => navigation.navigate('GradeReportDetail', { childId, childName })}
+//                         onPress={() => Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.')}
 //                     >
 //                         <Icon name="file-chart" size={20} color="#fff" />
 //                         <Text style={styles.actionBtnText}>Full Report</Text>

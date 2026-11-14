@@ -18,7 +18,7 @@
 // import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 // import NotificationHeader from '../components/NotificationHeader';
 // import { selectThemeData } from '../store/slices/themeSlice';
-// import { logout } from '../store/slices/authSlice';
+// import { logoutUser } from '../store/slices/authSlice';
 // import NotificationDetailScreen from '../screens/Notifications/NotificationDetailScreen';
 
 // const Tab = createBottomTabNavigator();
@@ -41,7 +41,7 @@
 //                     text: 'Logout',
 //                     style: 'destructive',
 //                     onPress: () => {
-//                         dispatch(logout());
+//                         dispatch(logoutUser());
 //                     }
 //                 }
 //             ]
@@ -397,7 +397,7 @@ import NotificationHeader from '../components/NotificationHeader';
 import NotificationDetailScreen from '../screens/Notifications/NotificationDetailScreen';
 import NotificationHandler from '../components/NotificationHandler';
 import { selectThemeData } from '../store/slices/themeSlice';
-import { logout } from '../store/slices/authSlice';
+import { logoutUser } from '../store/slices/authSlice';
 import DiaryDetailScreen from '../screens/Parent/DiaryDetailScreen';
 import ClassDiaryUnifiedScreen from '../screens/Parent/ClassDiaryAndSowScreen';
 
@@ -426,7 +426,7 @@ const CustomDrawerContent = (props) => {
                     text: 'Logout',
                     style: 'destructive',
                     onPress: () => {
-                        dispatch(logout());
+                        dispatch(logoutUser());
                     }
                 }
             ]
