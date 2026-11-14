@@ -25,8 +25,16 @@ Use an isolated development database and synthetic records. Keep credentials, de
 Existing author, template, asset and dependency attributions remain in place. Follow any existing license files; this documentation update does not grant a new license. For a change, describe the affected workflow, configuration and checks so it can be reviewed without guessing.
 
 
-## Application screenshot
+## Web and school app galleries
 
-![School administration login](docs/images/school-admin-login.jpg)
+Browse the **[gallery overview](docs/SCREEN_GUIDE.md)**, **[web portal gallery](docs/WEB_GALLERY.md)** and **[school app component gallery](docs/MOBILE_GALLERY.md)**. Each view explains its purpose, expected usage and validation limits.
 
-Captured from this repository’s React administration client running locally. Authentication, school records and mobile workflows were not exercised.
+![Web notification dashboard preview](docs/images/web/02-dashboard.png)
+
+<img src="docs/images/mobile/LoginScreen.png" width="260" alt="School app sign-in component preview" /> <img src="docs/images/mobile/Teacher-TeacherDashboard.png" width="260" alt="Teacher dashboard component preview" /> <img src="docs/images/mobile/Teacher-MarkAttendanceScreen.png" width="260" alt="Attendance component preview" />
+
+- **13 web views:** actual React/Vite screens with isolated local fixture responses, including the five rule-wizard steps.
+- **33 mobile component previews:** actual React Native screen components rendered in a phone-size browser with synthetic state and native adapters. These are **not native Android/iOS screenshots**.
+- **Honest scope:** the current web portal focuses on notifications and retains Task Management branding. Templates and Settings are placeholders; the User Management component is commented out. Several mobile components contain built-in mock values. The guides identify these limits.
+
+No real student data, live notification delivery or saved school transaction was used to produce the gallery. Backend authentication/persistence and native device features require separate validation.

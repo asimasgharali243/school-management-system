@@ -19,3 +19,8 @@ Keep credentials, signing identities, device sessions and operational records ou
 
 
 Additional visual check: Captured from this repository’s React administration client running locally. Authentication, school records and mobile workflows were not exercised.
+
+
+## Web and mobile gallery follow-up
+
+Added 13 web screenshots and 33 React Native Web component previews, all visibly labeled as fixture/component previews. Navigated the web rule wizard without submitting a rule. No live student records, service credentials, notification delivery, registration, native mobile build or backend persistence was tested. See [gallery overview](SCREEN_GUIDE.md), [web guide](WEB_GALLERY.md) and [mobile guide](MOBILE_GALLERY.md). Web placeholder/broken routes and mobile mock components remain documented source limitations.
