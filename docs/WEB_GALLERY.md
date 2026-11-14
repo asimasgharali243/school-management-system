@@ -4,7 +4,7 @@
 
 ## Capture method and scope
 
-These are screenshots of the actual React/Vite source running locally. An isolated loopback fixture service supplied synthetic authentication and empty API response data. The yellow UI PREVIEW banner is included in every capture. No deployed school service, production database, real student information, notification delivery or account creation was used or verified. Preview fixture code was not added to the application.
+These are screenshots of the actual React/Vite source running locally. An isolated loopback fixture service supplied synthetic authentication and empty API response data. The displayed zero/empty values are preview fixtures, not production metrics. No deployed school service, production database, real student information, notification delivery or account creation was used or verified. Preview fixture code was not added to the application.
 
 The web source in this repository currently provides a notification-focused administration portal, with Task Management branding. It does not contain a completed browser page for every school module present in the mobile app or backend.
 
