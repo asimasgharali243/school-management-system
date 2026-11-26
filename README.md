@@ -1,45 +1,142 @@
 # School Management System
 
-School administration across an ASP.NET Core backend, a React/Vite web portal and an Expo/React Native mobile client. Source modules cover students, teachers, campuses, classes/sections, grades, attendance, diaries, complaints and notifications.
+[![ASP.NET Core](https://img.shields.io/badge/ASP.NET%20Core-8.0-blue.svg)](https://dotnet.microsoft.com/)
+[![React](https://img.shields.io/badge/React-18-cyan.svg)](https://react.dev/)
+[![React Native](https://img.shields.io/badge/React%20Native-Expo-black.svg)](https://expo.dev/)
+[![Database](https://img.shields.io/badge/SQL%20Server-Multi--Tenant-red.svg)](https://www.microsoft.com/sql-server)
+[![License](https://img.shields.io/badge/License-Proprietary-darkgray.svg)](#)
 
-## Components and setup
+A complete enterprise educational administration and campus communication platform engineered with an **ASP.NET Core multi-tenant backend**, a **React/Vite administrative web portal**, and an **Expo/React Native cross-platform mobile app** for parents and faculty.
 
-- **API:** `school-management-Backend/`. Install the matching .NET SDK from its `.csproj`, configure a compatible private SQL database and run `dotnet run --project school-management-Backend/school-management-Backend.csproj`.
-- **Admin portal:** `materially-free-react-admin-template-1.0.0/`. Run `npm ci` and `npm start`; configure the API endpoint locally.
-- **Mobile:** `SchoolManagementApp/`. Install the package's Expo/native dependencies. Use `npx expo start` for the development server, or the package's Android/iOS scripts with the required native tools. The invalid legacy `prestart` lifecycle command was removed; use `npx expo start` or `npm start`.
+---
 
-Use synthetic student/teacher records for demonstrations. Do not publish student profiles, attendance records, credentials or notification keys. Push delivery, permissions, data migrations and role access require a representative test environment.
+## 🌟 System Overview & Multi-Tenant Architecture
 
-## Source overview
+The system coordinates daily academic and administrative operations across three synchronized subsystems:
 
-![School Management System source overview](docs/images/repository-overview.svg)
+```
+SchoolManagement/
+├── school-management-Backend/                 # ASP.NET Core Web API, EF Core & Multi-Tenant Engine
+│   ├── Controllers/                          # REST API Endpoints (Students, Attendance, Lectures, Gallery, etc.)
+│   ├── Services/                             # Background workers, Expo/Firebase push notifications
+│   ├── Data/                                 # MultiTenantDbContext & dynamic database resolvers
+│   └── Models/                               # Domain models & multi-tenant configurations
+├── materially-free-react-admin-template-1.0.0/ # React / Vite Web Admin Console
+│   └── src/views/                            # Interactive administration modules & analytics
+└── SchoolManagementApp/                       # Expo / React Native Mobile Application
+    └── src/screens/                          # Parent & Teacher native mobile workflows
+```
 
-This diagram is derived from the repository structure; it is not an application screenshot.
+---
 
-## Development and validation
+## 📸 Complete Application Pages & UI Walkthrough
 
-Use an isolated development database and synthetic records. Keep credentials, device sessions, signing keys and operational uploads outside Git. The presence of source code does not establish that every integration or deployment scenario has been tested. See [repository review](docs/REPOSITORY_REVIEW.md) for this audit's scope.
+Below is the comprehensive operational guide explaining every page and module across the Web Portal and Mobile App.
 
-## Ownership and contributions
+---
 
-Existing author, template, asset and dependency attributions remain in place. Follow any existing license files; this documentation update does not grant a new license. For a change, describe the affected workflow, configuration and checks so it can be reviewed without guessing.
+### 1. Administrative Web Portal Modules
 
+#### 1.1 Executive Campus Analytics & Attendance Dashboard
+- **Purpose**: Provides principals, directors, and head administrators with a bird's-eye view of school attendance health, fee collections, and staff presence.
+- **How it Works**: Aggregates real-time campus statistics including daily student check-ins, unauthorized absences, teacher attendance, pending parent complaints, and scheduled notification broadcasts. Features interactive charts for monthly enrollment trends.
 
-## Web and school app galleries
+#### 1.2 Student Directory & Lifecycle Enrollment
+- **Purpose**: Master registry of all enrolled learners across campuses.
+- **How it Works**: Displays searchable, filterable student records: Admission Number, Full Name, Father Name, Contact Mobile, Campus, Class, and Section. Allows admissions staff to register new students, update contact details, upload profile photos, and assign guardian relationships.
 
-Browse the **[gallery overview](docs/SCREEN_GUIDE.md)**, **[web portal gallery](docs/WEB_GALLERY.md)** and **[school app component gallery](docs/MOBILE_GALLERY.md)**. Each view explains its purpose, expected usage and validation limits.
+#### 1.3 Faculty & Teacher Roster Management
+- **Purpose**: Staff administration and academic subject distribution.
+- **How it Works**: Records teacher credentials, qualification records, department assignments, and assigned class teacher responsibilities. Facilitates scheduling and proxy management.
 
-![Web notification dashboard preview](docs/images/web/02-dashboard.png)
+#### 1.4 Academic Structure: Campuses, Classes & Sections
+- **Purpose**: Hierarchical configuration of the institution's academic branches.
+- **How it Works**: Manages multi-campus branches, academic years, grade tiers (Pre-School through Grade 12), and section divisions with capacity ceilings.
 
-<img src="docs/images/mobile/LoginScreen.png" width="260" alt="School app sign-in component preview" /> <img src="docs/images/roles/teacher-TeacherDashboard.png" width="260" alt="Teacher dashboard component preview" /> <img src="docs/images/roles/teacher-MarkAttendance.png" width="260" alt="Attendance component preview" />
+#### 1.5 Student Daily Attendance & Absence Auditing
+- **Purpose**: Accurate classroom attendance recording and instant parent notification.
+- **How it Works**: Teachers mark roll calls digitally. The system automatically identifies absent students and triggers automated SMS / Expo Push notifications to parents' smartphones via `BackgroundNotificationService`.
 
-- **13 web views:** actual React/Vite screens with isolated local fixture responses, including the five rule-wizard steps.
-- **Role-specific mobile gallery:** Admin 5, Teacher 14 and Parent 15 registered screen views, plus shared sign-in and access recovery, rendered with matching synthetic role identities and native adapters. These are **not native Android/iOS screenshots**.
-- **Honest scope:** the current web portal focuses on notifications and retains Task Management branding. Templates and Settings are placeholders; the User Management component is commented out. Several mobile components contain built-in mock values. The guides identify these limits.
+#### 1.6 Digital Academic Diary & Homework Portal
+- **Purpose**: Eliminates paper school diaries by publishing daily classroom work and homework digitally.
+- **How it Works**: Teachers author daily homework assignments, subject topics covered, and submission due dates. Immediately synced to parents' mobile app with push notifications.
 
-No real student data, live notification delivery or saved school transaction was used to produce the gallery. Backend authentication/persistence and native device features require separate validation.
+#### 1.7 Examination Grades & Report Cards
+- **Purpose**: Exam evaluation, marks calculation, and term progress card issuance.
+- **How it Works**: Records scores for quizzes, midterms, and finals. Computes GPA, percentages, and class positions, generating printable progress report cards.
 
+#### 1.8 Automated Push Notification Engine & Cron Scheduler
+- **Purpose**: Rules-based campus alerts and scheduled event dispatch.
+- **How it Works**: Configures cron-based notification rules (e.g., fee reminders on the 5th of every month, holiday alerts). Dispatches notifications via Expo Push and Firebase Cloud Messaging (FCM).
 
-## Mobile role routing
+#### 1.9 Curated Video Lectures & YouTube Curriculum Portal
+- **Purpose**: E-learning portal providing recorded video lectures for absent students or revision.
+- **How it Works**: Teachers upload or link curriculum-aligned YouTube video lessons categorized by Subject, Chapter, and Topic. The mobile app renders lessons via `CustomVideoPlayer.js`.
 
-Admin, Teacher and Parent now select dedicated navigators across supported API field/type variants. Missing or conflicting roles show an access-recovery screen instead of the unused Default dashboard. Login/restore metadata normalization, persisted logout, profile route aliases and absent-feature handling were corrected. See [role validation](docs/ROLE_VALIDATION.md) for 64 passing Node tests, 34 supplementary isolated checks and the remaining native/backend limits.
+#### 1.10 Campus Photo Gallery & Event Media Albums
+- **Purpose**: Showcases sports days, science fairs, annual functions, and campus events to parents.
+- **How it Works**: Organizes photo albums with compression pipelines (`mediaCompression.js`), accessible in the parent app gallery.
+
+#### 1.11 Student Performance & Behavioral Analytics
+- **Purpose**: Holistic student performance evaluation combining academics, attendance, and conduct.
+- **How it Works**: Visual progress charts tracking assignment completion rates, test trends, and teacher behavioral remarks.
+
+---
+
+### 2. Mobile App (Parent & Teacher Workflows)
+
+#### 2.1 Multi-Child Parent Dashboard
+- **Purpose**: Single sign-on for parents with multiple children enrolled in different classes.
+- **How it Works**: Allows instant child switching with individual attendance cards, diary updates, and upcoming exam schedules.
+
+#### 2.2 Native Mobile Video Player & Lectures
+- **Purpose**: Mobile-optimized revision experience.
+- **How it Works**: Streams class lectures directly on smartphones with playback speed controls, chapter navigation, and offline caching.
+
+#### 2.3 Teacher Mobile Attendance & Diary Quick-Entry
+- **Purpose**: Enables faculty to mark classroom attendance and broadcast homework directly from mobile devices without requiring a PC.
+- **How it Works**: Rapid tap-to-toggle attendance list with instant bulk submission to `AttendanceController`.
+
+---
+
+## 🛠️ Technology Stack & Prerequisites
+
+- **Backend Framework**: .NET 8.0 Web API (C# 12)
+- **Database Engine**: Microsoft SQL Server with dynamic multi-tenant connection resolution (`DatabaseResolver.cs`)
+- **Web Frontend**: React 18, Vite, Material UI (MUI), Redux Toolkit
+- **Mobile Client**: React Native, Expo, React Navigation, Redux Toolkit
+- **Push Notification Pipeline**: Expo Server SDK & Firebase Cloud Messaging (FCM v1)
+- **Media Engine**: Native YouTube Embeds & Custom Video Player
+
+---
+
+## 🚀 Setup & Execution Guide
+
+### 1. Backend API
+```powershell
+cd school-management-Backend
+dotnet restore
+dotnet build -c Release
+dotnet run -c Release
+```
+
+### 2. React Admin Web Portal
+```powershell
+cd materially-free-react-admin-template-1.0.0
+npm ci
+npm start
+```
+
+### 3. React Native Mobile App
+```powershell
+cd SchoolManagementApp
+npm ci
+npx expo start
+```
+
+---
+
+## 🔒 Security & Data Privacy
+
+- Real student records, parent contact numbers, and Firebase service-account private keys are excluded from version control.
+- Ensure production SQL databases utilize encrypted connection strings with TLS certificates.

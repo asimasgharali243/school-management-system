@@ -16,19 +16,19 @@ namespace school_management_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class NotificationRulesController : ControllerBase
+    public class NotificationRulesController : BaseApiController
     {
         private readonly INotificationRuleProcessor _ruleProcessor;
-        private readonly ApplicationDbContext _context;
+
         private readonly ILogger<NotificationRulesController> _logger;
 
         public NotificationRulesController(
             INotificationRuleProcessor ruleProcessor,
-            ApplicationDbContext context,
+          
             ILogger<NotificationRulesController> logger)
         {
             _ruleProcessor = ruleProcessor;
-            _context = context;
+        
             _logger = logger;
         }
 
@@ -38,7 +38,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.NotificationRules.AsQueryable();
+                var query = DbContext.NotificationRules.AsQueryable();
                 
                 if (active.HasValue)
                     query = query.Where(r => r.IsActive == active.Value);
@@ -109,7 +109,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
 
@@ -239,8 +239,8 @@ namespace school_management_Backend.Controllers
                     rule.NextRunTime = await _ruleProcessor.CalculateNextRunTime(rule);
                 }
                 
-                _context.NotificationRules.Add(rule);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationRules.Add(rule);
+                await DbContext.SaveChangesAsync();
                 
                 if (rule.RuleType == "CRON" && !rule.IsManualTrigger && rule.IsActive)
                 {
@@ -289,7 +289,7 @@ namespace school_management_Backend.Controllers
                     });
                 }
 
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
 
@@ -339,7 +339,7 @@ namespace school_management_Backend.Controllers
                     rule.NextRunTime = null;
                 }
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
                 
                 if (rule.RuleType == "CRON" && !rule.IsManualTrigger && rule.IsActive)
                 {
@@ -371,7 +371,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
                 
@@ -406,8 +406,8 @@ namespace school_management_Backend.Controllers
                     CreatedTime = DateTime.Now
                 };
                 
-                _context.NotificationQueue.Add(notification);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationQueue.Add(notification);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("Tested rule {RuleID} for user {UserID}", rule.RuleID, model.TestUserID);
                 
@@ -430,7 +430,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
                 
@@ -462,7 +462,7 @@ namespace school_management_Backend.Controllers
                     }
                 }
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("{Action} rule {RuleID}", model.IsActive ? "Activated" : "Deactivated", rule.RuleID);
                 
@@ -486,7 +486,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation("🚀 Manual execution requested for rule ID: {Id}", id);
                 
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
                 
@@ -505,7 +505,7 @@ namespace school_management_Backend.Controllers
                 
                 await _ruleProcessor.ExecuteRuleManuallyAsync(id);
                 
-                await _context.Entry(rule).ReloadAsync();
+                await DbContext.Entry(rule).ReloadAsync();
                 
                 return Ok(new { 
                     Success = true, 
@@ -530,11 +530,11 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var rule = await _context.NotificationRules.FindAsync(id);
+                var rule = await DbContext.NotificationRules.FindAsync(id);
                 if (rule == null)
                     return NotFound(new { Success = false, Message = "Rule not found" });
 
-                var hasPendingNotifications = await _context.NotificationQueue
+                var hasPendingNotifications = await DbContext.NotificationQueue
                     .AnyAsync(n => n.RuleID == id && (n.Status == "PENDING" || n.Status == "PROCESSING"));
                 
                 if (hasPendingNotifications)
@@ -548,8 +548,8 @@ namespace school_management_Backend.Controllers
                     RecurringJob.RemoveIfExists($"notification-rule-{rule.RuleID}");
                 }
 
-                _context.NotificationRules.Remove(rule);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationRules.Remove(rule);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("Deleted rule {RuleID}", rule.RuleID);
                 

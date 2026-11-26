@@ -9,14 +9,13 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class CampusController : ControllerBase
+    public class CampusController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+    
         private readonly ILogger<CampusController> _logger;
 
-        public CampusController(ApplicationDbContext context, ILogger<CampusController> logger)
+        public CampusController( ILogger<CampusController> logger)
         {
-            _context = context;
             _logger = logger;
         }
 
@@ -26,7 +25,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var campuses = await _context.tbl_Campus
+                var campuses = await DbContext.tbl_Campus
                     .Select(c => new
                     {
                         c.CampusID,
@@ -51,7 +50,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var campus = await _context.tbl_Campus
+                var campus = await DbContext.tbl_Campus
                     .Where(c => c.CampusID == id)
                     .Select(c => new
                     {

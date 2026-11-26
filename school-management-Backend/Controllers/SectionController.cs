@@ -10,14 +10,14 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class SectionController : ControllerBase
+    public class SectionController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+       
         private readonly ILogger<SectionController> _logger;
 
-        public SectionController(ApplicationDbContext context, ILogger<SectionController> logger)
+        public SectionController(ILogger<SectionController> logger)
         {
-            _context = context;
+         
             _logger = logger;
         }
 
@@ -27,7 +27,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var sections = await _context.tbl_AddSection
+                var sections = await DbContext.tbl_AddSection
                     .Where(s => s.Active == true)
                     .OrderBy(s => s.sortby)
                     .Select(s => new
@@ -55,7 +55,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var sections = await _context.tbl_AddSection
+                var sections = await DbContext.tbl_AddSection
                     .Where(s => s.Class_ID == classId && s.Active == true)
                     .OrderBy(s => s.sortby)
                     .Select(s => new
@@ -82,7 +82,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var section = await _context.tbl_AddSection
+                var section = await DbContext.tbl_AddSection
                     .Where(s => s.ID == id)
                     .Select(s => new
                     {

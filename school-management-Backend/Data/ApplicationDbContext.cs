@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using school_management_Backend.Models;
+using school_management_Backend.DTOs;
 
 namespace school_management_Backend.Data;
 
@@ -360,6 +361,14 @@ public virtual DbSet<NotificationLog> NotificationLogs { get; set; }
 public virtual DbSet<BatchNotification> BatchNotifications { get; set; }
 public virtual DbSet<NotificationHistory> NotificationHistory { get; set; }
 public DbSet<DiaryAccessControl> tbl_DiaryAccessControl { get; set; }
+
+public virtual DbSet<Lecture> tblVideoLectures { get; set; }
+public virtual DbSet<LectureSection> tbl_LectureSections { get; set; }
+public virtual DbSet<GalleryAlbum> tbl_GalleryAlbum { get; set; }
+public virtual DbSet<GalleryMedia> tbl_GalleryMedia { get; set; }
+public DbSet<PerformanceResult> PerformanceResults { get; set; }
+   public DbSet<AboutSetting> AboutSettings { get; set; }
+
 protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 {
     if (!optionsBuilder.IsConfigured)
@@ -369,6 +378,13 @@ protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+
+
+        modelBuilder.Entity<PerformanceResult>(entity =>
+    {
+        entity.HasNoKey();
+        entity.ToView(null); // Not mapped to a table
+    });
         modelBuilder.Entity<Temp_MultiResult>(entity =>
         {
             entity.HasNoKey();
@@ -3939,6 +3955,74 @@ modelBuilder.Entity<DiaryAccessControl>()
 modelBuilder.Entity<DiaryAccessControl>()
     .Property(x => x.CreatedDT)
     .HasDefaultValueSql("GETDATE()");
+
+
+ modelBuilder.Entity<Lecture>(entity =>
+    {
+        entity.ToTable("tblVideoLectures");
+        entity.HasKey(e => e.LectureId);
+        entity.Property(e => e.LectureId).UseIdentityColumn();
+
+        // Relationships
+        entity.HasOne(e => e.Class)
+            .WithMany()
+            .HasForeignKey(e => e.ClassId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasOne(e => e.Subject)
+            .WithMany()
+            .HasForeignKey(e => e.SubjectId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        entity.HasOne(e => e.Book)
+            .WithMany()
+            .HasForeignKey(e => e.BookId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .IsRequired(false);
+
+        entity.HasOne(e => e.Chapter)
+            .WithMany()
+            .HasForeignKey(e => e.ChapterId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .IsRequired(false);
+
+        entity.HasOne(e => e.Topic)
+            .WithMany()
+            .HasForeignKey(e => e.TopicId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .IsRequired(false);
+    });
+
+        modelBuilder.Entity<LectureSection>(entity =>
+    {
+        entity.ToTable("tbl_LectureSections");
+        entity.HasKey(e => e.Id);
+        entity.Property(e => e.Id).UseIdentityColumn();
+
+        entity.HasOne(e => e.Lecture)
+            .WithMany(l => l.LectureSections)
+            .HasForeignKey(e => e.LectureId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity.HasOne(e => e.Section)
+            .WithMany()
+            .HasForeignKey(e => e.SectionId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Indexes
+        entity.HasIndex(e => e.LectureId).HasDatabaseName("IX_LectureSections_LectureId");
+        entity.HasIndex(e => e.SectionId).HasDatabaseName("IX_LectureSections_SectionId");
+    });
+
+ modelBuilder.Entity<AboutSetting>()
+                .HasIndex(x => x.SettingKey)
+                .IsUnique();
+
+            modelBuilder.Entity<AboutSetting>()
+                .Property(x => x.UpdatedAt)
+                .HasDefaultValueSql("GETDATE()");
+
+
 
 
         OnModelCreatingPartial(modelBuilder);

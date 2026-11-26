@@ -10,14 +10,13 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ClassController : ControllerBase
+    public class ClassController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+   
         private readonly ILogger<ClassController> _logger;
 
-        public ClassController(ApplicationDbContext context, ILogger<ClassController> logger)
+        public ClassController( ILogger<ClassController> logger)
         {
-            _context = context;
             _logger = logger;
         }
 
@@ -27,7 +26,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var classes = await _context.tbl_AddClass
+                var classes = await DbContext.tbl_AddClass
                     .Where(c => c.Active == true)
                     .OrderBy(c => c.sort_by)
                     .Select(c => new
@@ -56,7 +55,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var classes = await _context.tbl_AddClass
+                var classes = await DbContext.tbl_AddClass
                     .Where(c => c.Active == true)
                     .OrderBy(c => c.sort_by)
                     .Select(c => new
@@ -82,7 +81,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var classItem = await _context.tbl_AddClass
+                var classItem = await DbContext.tbl_AddClass
                     .Where(c => c.Class_ID == id)
                     .Select(c => new
                     {

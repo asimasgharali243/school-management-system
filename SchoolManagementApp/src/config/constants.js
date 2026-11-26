@@ -1,7 +1,7 @@
 // src/config/constants.js
-// export const BASE_URL = 'https://schoolapp.ultsol.cloud';
+export const BASE_URL = 'https://schoolapp.ultsol.cloud';
 
-export const BASE_URL = 'http://localhost:5027';
+ //export const BASE_URL = 'http://localhost:5000';
 export const API_TIMEOUT = 30000;
 export const ENCRYPTION_KEY = 'school-management-2024';
 
@@ -136,6 +136,10 @@ export const themes = {
         warningLight: '#FBBF24',
         info: '#3B82F6',
         infoLight: '#60A5FA',
+
+        skeletonBg: '#E1E9EE',
+skeletonHighlight: '#F2F8FC',
+success: '#4CAF50',
         
         // Grade colors
         gradeA: '#22C55E',
@@ -192,6 +196,11 @@ export const themes = {
         
         shadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
         shadowStrong: '0px 8px 24px rgba(0, 0, 0, 0.4)',
+
+skeletonBg: '#E1E9EE',
+skeletonHighlight: '#F2F8FC',
+success: '#4CAF50',
+
     },
     
     blue: {
@@ -232,6 +241,11 @@ export const themes = {
         
         shadow: '0px 4px 12px rgba(0, 0, 0, 0.05)',
         shadowStrong: '0px 8px 24px rgba(0, 0, 0, 0.1)',
+
+
+        skeletonBg: '#E1E9EE',
+skeletonHighlight: '#F2F8FC',
+success: '#4CAF50',
     },
 };
 

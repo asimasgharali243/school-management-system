@@ -18,7 +18,7 @@
 // import NotificationsScreen from '../screens/Notifications/NotificationsScreen';
 // import NotificationHeader from '../components/NotificationHeader';
 // import { selectThemeData } from '../store/slices/themeSlice';
-// import { logoutUser } from '../store/slices/authSlice';
+// import { logout } from '../store/slices/authSlice';
 // import NotificationDetailScreen from '../screens/Notifications/NotificationDetailScreen';
 
 // const Tab = createBottomTabNavigator();
@@ -41,7 +41,7 @@
 //                     text: 'Logout',
 //                     style: 'destructive',
 //                     onPress: () => {
-//                         dispatch(logoutUser());
+//                         dispatch(logout());
 //                     }
 //                 }
 //             ]
@@ -397,7 +397,7 @@ import NotificationHeader from '../components/NotificationHeader';
 import NotificationDetailScreen from '../screens/Notifications/NotificationDetailScreen';
 import NotificationHandler from '../components/NotificationHandler';
 import { selectThemeData } from '../store/slices/themeSlice';
-import { logoutUser } from '../store/slices/authSlice';
+import { logout } from '../store/slices/authSlice';
 import DiaryDetailScreen from '../screens/Parent/DiaryDetailScreen';
 import ClassDiaryUnifiedScreen from '../screens/Parent/ClassDiaryAndSowScreen';
 
@@ -406,6 +406,13 @@ import ComplaintDetailScreen from '../screens/Parent/ComplaintDetailScreen';
 
 import ComplaintListScreen from '../screens/Parent/ComplaintListScreen';
 import CreateComplaintScreen from '../screens/Parent/CreateComplaintScreen';
+import ParentLectureListScreen from '../screens/Parent/Lectures/ParentLectureListScreen';
+import ParentLectureDetailScreen from '../screens/Parent/Lectures/ParentLectureDetailScreen';
+import StudentGalleryScreen from '../screens/Parent/Gallery/GalleryAlbumsScreen';
+import StudentGalleryDetailScreen from '../screens/Parent/Gallery/GalleryAlbumDetailScreen';
+import StudentPerformanceScreen from '../screens/Parent/StudentPerformanceScreen';
+import AboutScreen from '../screens/Parent/AboutScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -426,7 +433,7 @@ const CustomDrawerContent = (props) => {
                     text: 'Logout',
                     style: 'destructive',
                     onPress: () => {
-                        dispatch(logoutUser());
+                        dispatch(logout());
                     }
                 }
             ]
@@ -774,6 +781,36 @@ const ParentStackNavigator = () => {
     options={{ headerShown: false }}
 />
 
+<Stack.Screen 
+  name="ParentLectureList" 
+  component={ParentLectureListScreen}
+  options={{ headerShown: false }}
+/>
+<Stack.Screen 
+  name="ParentLectureDetail" 
+  component={ParentLectureDetailScreen}
+  options={{ headerShown: false }}
+/>
+
+<Stack.Screen 
+  name="StudentGallery" 
+  component={StudentGalleryScreen}
+    options={{ headerShown: false }}
+/>
+<Stack.Screen 
+  name="StudentGalleryDetail" 
+  component={StudentGalleryDetailScreen}
+    options={{ headerShown: false }}
+/>
+
+<Stack.Screen 
+    name="About" 
+    component={AboutScreen}
+    options={({ navigation }) => ({
+        headerShown: false, // We have custom animated header
+    })}
+/>
+<Stack.Screen name="StudentPerformance" component={StudentPerformanceScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
     );
 };

@@ -911,6 +911,7 @@
 // });
 
 // export default ChildrenListScreen;
+
 // src/screens/Parent/ChildrenListScreen.js
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -929,6 +930,7 @@ import { selectThemeData } from '../../store/slices/themeSlice';
 import { selectChildren, setChildren, selectCurrentUser } from '../../store/slices/authSlice';
 import ChildCard from '../../components/Parent/ChildCard';
 import { useGetChildrenQuery } from '../../store/attendanceApi';
+
 
 const ChildrenListScreen = ({ navigation }) => {
     const theme = useSelector(selectThemeData);
@@ -1170,7 +1172,30 @@ const ChildrenListScreen = ({ navigation }) => {
                     </Text>
                 </View>
             </View>
+
+          <View style={[styles.infoCard, { backgroundColor: theme.card }]}>
+    <Icon name="school" size={24} color={theme.primary} />
+    <View style={styles.infoContent}>
+        <Text style={[styles.infoTitle, { color: theme.text }]}>
+            Social Media Links
+        </Text>
+        <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+            Learn more about our mission, vision, facilities, and educational approach
+        </Text>
+        <TouchableOpacity
+            style={[styles.aboutButton, { backgroundColor: theme.primary + '10' }]}
+            onPress={() => navigation.navigate('About')}
+        >
+            <Text style={[styles.aboutButtonText, { color: theme.primary }]}>
+                Read More
+            </Text>
+            <Icon name="arrow-right" size={18} color={theme.primary} />
+        </TouchableOpacity>
+    </View>
+</View>
+
         </ScrollView>
+        
     );
 };
 
@@ -1263,6 +1288,21 @@ const styles = StyleSheet.create({
     infoText: {
         fontSize: 14,
         lineHeight: 20,
+    },
+        aboutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 25,
+        marginTop: 12,
+        alignSelf: 'flex-start',
+        gap: 8,
+    },
+    aboutButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

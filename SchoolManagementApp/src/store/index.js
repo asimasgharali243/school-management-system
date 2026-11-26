@@ -13,6 +13,10 @@ import { attendanceApi } from "./attendanceApi";
 import { diaryApi } from "./diaryApi";
 import { feeApi } from "./feeApi";
 import { complaintApi } from "./complaintApi";
+import { lectureApi } from './lectureApi';
+import { galleryApi } from './galleryApi';
+import { performanceApi } from './performanceApi';
+import {aboutApi} from './aboutApi';
 // Create simple reducers for missing ones
 const userReducer = (state = {}, action) => {
   switch (action.type) {
@@ -31,6 +35,10 @@ const rootReducer = combineReducers({
   [diaryApi.reducerPath]: diaryApi.reducer,
   [feeApi.reducerPath]: feeApi.reducer,
   [complaintApi.reducerPath]: complaintApi.reducer,
+  [lectureApi.reducerPath]: lectureApi.reducer,
+  [galleryApi.reducerPath]: galleryApi.reducer,
+  [performanceApi.reducerPath]: performanceApi.reducer,
+  [aboutApi.reducerPath]: aboutApi.reducer,
 });
 
 const persistConfig = {
@@ -111,7 +119,11 @@ export const store = configureStore({
       attendanceApi.middleware,
       diaryApi.middleware,
       feeApi.middleware,
-      complaintApi.middleware
+      complaintApi.middleware,
+      lectureApi.middleware,
+      performanceApi.middleware,
+      galleryApi.middleware,
+      aboutApi.middleware
     ), // Add RTK Query middleware here
 });
 

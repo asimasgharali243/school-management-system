@@ -7,19 +7,22 @@ using school_management_Backend.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+using school_management_Backend.DTOs;
+using Microsoft.Extensions.Logging;
+using System.Linq;
+
 namespace school_management_Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize(Roles = "Admin")]
-    public class AdminNotificationController : ControllerBase
+    public class AdminNotificationController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+        
         private readonly ILogger<AdminNotificationController> _logger;
 
-        public AdminNotificationController(ApplicationDbContext context, ILogger<AdminNotificationController> logger)
+        public AdminNotificationController( ILogger<AdminNotificationController> logger)
         {
-            _context = context;
             _logger = logger;
         }
 
@@ -34,8 +37,8 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.NotificationLogs.AsQueryable();
-
+                var query = DbContext.NotificationLogs.AsQueryable();
+    
                 if (fromDate.HasValue)
                     query = query.Where(l => l.Timestamp >= fromDate.Value);
 
@@ -93,7 +96,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.NotificationHistory.AsQueryable();
+                var query = DbContext.NotificationHistory.AsQueryable();
 
                 if (fromDate.HasValue)
                     query = query.Where(h => h.SentTime >= fromDate.Value);
@@ -155,7 +158,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.BatchNotifications.AsQueryable();
+                var query = DbContext.BatchNotifications.AsQueryable();
 
                 if (!string.IsNullOrEmpty(status))
                     query = query.Where(b => b.Status == status);
@@ -207,7 +210,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
         toDate ??= DateTime.Now;
 
         // Rule statistics
-        var ruleStats = await _context.NotificationRules
+        var ruleStats = await DbContext.NotificationRules
             .Select(r => new
             {
                 r.RuleID,
@@ -222,7 +225,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
             .ToListAsync();
 
         // Notification statistics
-        var notificationStats = await _context.NotificationQueue
+        var notificationStats = await DbContext.NotificationQueue
             .Where(n => n.CreatedTime >= fromDate && n.CreatedTime <= toDate)
             .GroupBy(n => n.Status)
             .Select(g => new
@@ -240,13 +243,13 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
         double averageAttemptsValue = 0;
         if (totalNotifications > 0)
         {
-            averageAttemptsValue = await _context.NotificationQueue
+            averageAttemptsValue = await DbContext.NotificationQueue
                 .Where(n => n.CreatedTime >= fromDate && n.CreatedTime <= toDate)
                 .AverageAsync(n => (double)n.AttemptCount);
         }
 
         // Device statistics
-        var deviceStats = await _context.UserDevices
+        var deviceStats = await DbContext.UserDevices
             .GroupBy(d => d.Platform)
             .Select(g => new
             {
@@ -257,7 +260,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
             .ToListAsync();
 
         // History statistics
-        var historyStats = await _context.NotificationHistory
+        var historyStats = await DbContext.NotificationHistory
             .Where(h => h.ArchivedDate >= fromDate && h.ArchivedDate <= toDate)
             .GroupBy(h => h.Category)
             .Select(g => new
@@ -268,7 +271,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
             .ToListAsync();
 
         // Log statistics
-        var logStats = await _context.NotificationLogs
+        var logStats = await DbContext.NotificationLogs
             .Where(l => l.Timestamp >= fromDate && l.Timestamp <= toDate)
             .GroupBy(l => l.Action)
             .Select(g => new
@@ -363,8 +366,8 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     CreatedTime = DateTime.Now
                 };
 
-                _context.BatchNotifications.Add(batch);
-                await _context.SaveChangesAsync();
+                DbContext.BatchNotifications.Add(batch);
+                await DbContext.SaveChangesAsync();
 
                 // Create notifications for each user
                 var notifications = new List<NotificationQueue>();
@@ -389,12 +392,12 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     notifications.Add(notification);
                 }
 
-                _context.NotificationQueue.AddRange(notifications);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationQueue.AddRange(notifications);
+                await DbContext.SaveChangesAsync();
 
                 // Update batch status
                 batch.Status = "PENDING";
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Created broadcast notification for {Count} users (Batch ID: {BatchId})", users.Count, batch.BatchID);
 
@@ -432,8 +435,8 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     Details = $"Webhook test to {model.WebhookUrl}"
                 };
 
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Tested webhook: {Url}", model.WebhookUrl);
                 
@@ -462,7 +465,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
             switch (model.TargetType?.ToUpper())
             {
                 case "ALL":
-                    var allUsers = await _context.UserDevices
+                    var allUsers = await DbContext.UserDevices
                         .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken))
                         .Select(d => new BroadcastUser
                         {
@@ -475,7 +478,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     break;
 
                 case "PARENTS":
-                    var parents = await _context.UserDevices
+                    var parents = await DbContext.UserDevices
                         .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken) && d.UserType == "PARENT")
                         .Select(d => new BroadcastUser
                         {
@@ -488,7 +491,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     break;
 
                 case "TEACHERS":
-                    var teachers = await _context.UserDevices
+                    var teachers = await DbContext.UserDevices
                         .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken) && d.UserType == "TEACHER")
                         .Select(d => new BroadcastUser
                         {
@@ -501,7 +504,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                     break;
 
                 case "ADMIN":
-                    var admins = await _context.UserDevices
+                    var admins = await DbContext.UserDevices
                         .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken) && d.UserType == "ADMIN")
                         .Select(d => new BroadcastUser
                         {
@@ -519,7 +522,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
                         var classId = model.TargetFilter["ClassId"].Value<int>();
                         // This query depends on your actual database structure
                         // Adjust based on your actual student-parent relationships
-                        var classUsers = await _context.UserDevices
+                        var classUsers = await DbContext.UserDevices
                             .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken))
                             .Take(10) // Limit for demo - adjust based on your actual query
                             .Select(d => new BroadcastUser
@@ -535,7 +538,7 @@ public async Task<IActionResult> GetSystemStats([FromQuery] DateTime? fromDate =
 
                 default:
                     // Default to all active users with tokens
-                    var defaultUsers = await _context.UserDevices
+                    var defaultUsers = await DbContext.UserDevices
                         .Where(d => d.IsActive && !string.IsNullOrEmpty(d.ExpoToken))
                         .Select(d => new BroadcastUser
                         {

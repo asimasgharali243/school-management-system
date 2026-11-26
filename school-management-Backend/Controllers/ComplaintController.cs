@@ -17,15 +17,14 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ComplaintController : ControllerBase
+    public class ComplaintController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+  
         private readonly ILogger<ComplaintController> _logger;
 
-        public ComplaintController(ApplicationDbContext context, ILogger<ComplaintController> logger)
+        public ComplaintController( ILogger<ComplaintController> logger)
         {
-            _context = context;
-            _logger = logger;
+           _logger = logger;
         }
 
         // GET: api/Complaint/categories
@@ -37,7 +36,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation("Getting complaint categories");
 
-                var categories = await _context.tbl_ComplaintCategory
+                var categories = await DbContext.tbl_ComplaintCategory
                     .Where(c => c.Active == true || c.Active == null)
                     .OrderBy(c => c.Title)
                     .Select(c => new ComplaintCategoryDto
@@ -66,7 +65,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation($"Getting complaints for student: {studentId}");
 
-                var complaints = await _context.tbl_Complaint
+                var complaints = await DbContext.tbl_Complaint
                     .Include(c => c.Student)
                     .Include(c => c.Category)
                     .Where(c => c.Reg_Id == studentId)
@@ -91,7 +90,7 @@ namespace school_management_Backend.Controllers
                         Status = c.Status,
                         Priority = c.Priority,
                         CreatedDT = c.CreatedDT,
-                        CreatedByName = _context.tbl_User.Where(u => u.ID == c.CreatedBy).Select(u => u.UserName).FirstOrDefault()
+                        CreatedByName = DbContext.tbl_User.Where(u => u.ID == c.CreatedBy).Select(u => u.UserName).FirstOrDefault()
                     })
                     .ToListAsync();
 
@@ -114,7 +113,7 @@ namespace school_management_Backend.Controllers
                 _logger.LogInformation($"Getting complaints for parent: {parentId}");
 
                 // Get parent's family code
-                var parent = await _context.tbl_User
+                var parent = await DbContext.tbl_User
                     .FirstOrDefaultAsync(u => u.ID == parentId);
 
                 if (parent == null || !parent.FamilyID.HasValue)
@@ -123,12 +122,12 @@ namespace school_management_Backend.Controllers
                 }
 
                 // Get all students under this family
-                var students = await _context.tbl_StudentRegistration
+                var students = await DbContext.tbl_StudentRegistration
                     .Where(s => s.Family_Code == parent.FamilyID)
                     .Select(s => s.Reg_Id)
                     .ToListAsync();
 
-                var complaints = await _context.tbl_Complaint
+                var complaints = await DbContext.tbl_Complaint
                     .Include(c => c.Student)
                     .Include(c => c.Category)
                     .Where(c => students.Contains(c.Reg_Id ?? 0))
@@ -175,7 +174,7 @@ namespace school_management_Backend.Controllers
                 _logger.LogInformation($"Creating complaint for student: {model.Reg_Id}");
 
                 // Get next complaint number
-                var lastComplaint = await _context.tbl_Complaint
+                var lastComplaint = await DbContext.tbl_Complaint
                     .OrderByDescending(c => c.ComplainNo)
                     .FirstOrDefaultAsync();
 
@@ -199,8 +198,8 @@ namespace school_management_Backend.Controllers
                     CreatedDT = DateTime.Now
                 };
 
-                _context.tbl_Complaint.Add(complaint);
-                await _context.SaveChangesAsync();
+                DbContext.tbl_Complaint.Add(complaint);
+                await DbContext.SaveChangesAsync();
 
                 _logger.LogInformation($"Complaint created with ID: {complaint.ComplainID}, No: {complaint.ComplainNo}");
 
@@ -220,7 +219,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var complaint = await _context.tbl_Complaint
+                var complaint = await DbContext.tbl_Complaint
                     .FirstOrDefaultAsync(c => c.ComplainID == model.ComplainID);
 
                 if (complaint == null)
@@ -232,7 +231,7 @@ namespace school_management_Backend.Controllers
                 complaint.ModifyBy = model.ModifyBy;
                 complaint.ModifyDT = DateTime.Now;
 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 _logger.LogInformation($"Complaint {model.ComplainID} status updated to {model.Status}");
 
@@ -252,7 +251,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var complaint = await _context.tbl_Complaint
+                var complaint = await DbContext.tbl_Complaint
                     .Include(c => c.Student)
                     .Include(c => c.Category)
                     .Where(c => c.ComplainID == complaintId)

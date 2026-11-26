@@ -13,22 +13,22 @@ namespace school_management_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class PushNotificationController : ControllerBase
+    public class PushNotificationController : BaseApiController
     {
         private readonly IPureFirebaseNotificationService _firebaseService;
         private readonly IPushNotificationService _pushService;
-        private readonly ApplicationDbContext _context;
+   
         private readonly ILogger<PushNotificationController> _logger;
 
         public PushNotificationController(
             IPureFirebaseNotificationService firebaseService,
             IPushNotificationService pushService,
-            ApplicationDbContext context,
+         
             ILogger<PushNotificationController> logger)
         {
             _firebaseService = firebaseService;
             _pushService = pushService;
-            _context = context;
+          
             _logger = logger;
         }
 
@@ -46,7 +46,7 @@ namespace school_management_Backend.Controllers
                     return BadRequest(new { Success = false, Message = "FCMToken is required" });
 
                 // STEP 1: Try to find existing device with SAME TOKEN
-                var existingDevice = await _context.UserDevices
+                var existingDevice = await DbContext.UserDevices
                     .FirstOrDefaultAsync(d => d.UserID == model.UserId && d.FCMToken == model.FCMToken);
                 
                 if (existingDevice != null)
@@ -60,7 +60,7 @@ namespace school_management_Backend.Controllers
                     existingDevice.LastActive = DateTime.Now;
                     existingDevice.UserType = model.UserType ?? existingDevice.UserType;
                     
-                    await _context.SaveChangesAsync();
+                    await DbContext.SaveChangesAsync();
                     
                     _logger.LogInformation("✅ Updated existing FCM device for user {UserId}", model.UserId);
                     
@@ -72,7 +72,7 @@ namespace school_management_Backend.Controllers
                 }
 
                 // STEP 2: Check for ANY existing device for this user (to handle unique constraint)
-                var anyUserDevice = await _context.UserDevices
+                var anyUserDevice = await DbContext.UserDevices
                     .FirstOrDefaultAsync(d => d.UserID == model.UserId);
                 
                 if (anyUserDevice != null)
@@ -90,7 +90,7 @@ namespace school_management_Backend.Controllers
                     anyUserDevice.LastActive = DateTime.Now;
                     anyUserDevice.UserType = model.UserType ?? anyUserDevice.UserType;
                     
-                    await _context.SaveChangesAsync();
+                    await DbContext.SaveChangesAsync();
                     
                     _logger.LogInformation("✅ Updated existing device with new FCM token");
                     
@@ -117,8 +117,8 @@ namespace school_management_Backend.Controllers
                     CreatedDate = DateTime.Now
                 };
                 
-                _context.UserDevices.Add(newDevice);
-                await _context.SaveChangesAsync();
+                DbContext.UserDevices.Add(newDevice);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("✅ Created new FCM device for user {UserId}", model.UserId);
                 
@@ -135,7 +135,7 @@ namespace school_management_Backend.Controllers
                 // RECOVERY: Try to find and update ANY device for this user
                 try
                 {
-                    var recoveryDevice = await _context.UserDevices
+                    var recoveryDevice = await DbContext.UserDevices
                         .FirstOrDefaultAsync(d => d.UserID == model.UserId);
                     
                     if (recoveryDevice != null)
@@ -149,7 +149,7 @@ namespace school_management_Backend.Controllers
                         recoveryDevice.IsActive = true;
                         recoveryDevice.UserType = model.UserType ?? recoveryDevice.UserType;
                         
-                        await _context.SaveChangesAsync();
+                        await DbContext.SaveChangesAsync();
                         
                         _logger.LogInformation("✅ Recovery successful - updated existing device");
                         
@@ -196,7 +196,7 @@ namespace school_management_Backend.Controllers
                     return BadRequest(new { Success = false, Message = "Expo token is required" });
 
                 // Check if device already exists
-                var existingDevice = await _context.UserDevices
+                var existingDevice = await DbContext.UserDevices
                     .FirstOrDefaultAsync(d => d.UserID == model.UserID && d.ExpoToken == model.ExpoToken);
                 
                 if (existingDevice != null)
@@ -212,7 +212,7 @@ namespace school_management_Backend.Controllers
                 else
                 {
                     // Check if user has any device
-                    var anyDevice = await _context.UserDevices
+                    var anyDevice = await DbContext.UserDevices
                         .FirstOrDefaultAsync(d => d.UserID == model.UserID);
                     
                     if (anyDevice != null)
@@ -227,7 +227,7 @@ namespace school_management_Backend.Controllers
                         anyDevice.AppVersion = model.AppVersion ?? anyDevice.AppVersion;
                         anyDevice.OSVersion = model.OSVersion ?? anyDevice.OSVersion;
                         
-                        await _context.SaveChangesAsync();
+                        await DbContext.SaveChangesAsync();
                         
                         _logger.LogInformation("✅ Updated existing device with Expo token");
                         
@@ -254,10 +254,10 @@ namespace school_management_Backend.Controllers
                         CreatedDate = DateTime.Now
                     };
                     
-                    _context.UserDevices.Add(device);
+                    DbContext.UserDevices.Add(device);
                 }
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("✅ Registered Expo device for user {UserID}", model.UserID);
                 
@@ -279,7 +279,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.UserDevices.Where(d => d.UserID == model.UserID);
+                var query = DbContext.UserDevices.Where(d => d.UserID == model.UserID);
                 
                 if (!string.IsNullOrEmpty(model.ExpoToken))
                     query = query.Where(d => d.ExpoToken == model.ExpoToken);
@@ -291,7 +291,7 @@ namespace school_management_Backend.Controllers
                 if (device != null)
                 {
                     device.IsActive = false;
-                    await _context.SaveChangesAsync();
+                    await DbContext.SaveChangesAsync();
                     _logger.LogInformation("✅ Unregistered device for user {UserID}", model.UserID);
                 }
                 
@@ -346,7 +346,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var device = await _context.UserDevices
+                var device = await DbContext.UserDevices
                     .Where(d => d.UserID == userId && d.IsActive)
                     .OrderByDescending(d => d.LastActive)
                     .FirstOrDefaultAsync();
@@ -406,7 +406,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var devices = await _context.UserDevices
+                var devices = await DbContext.UserDevices
                     .Where(d => d.UserID == userId)
                     .Select(d => new
                     {
@@ -444,10 +444,10 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var total = await _context.UserDevices.CountAsync();
-                var active = await _context.UserDevices.CountAsync(d => d.IsActive);
-                var fcm = await _context.UserDevices.CountAsync(d => !string.IsNullOrEmpty(d.FCMToken));
-                var expo = await _context.UserDevices.CountAsync(d => !string.IsNullOrEmpty(d.ExpoToken));
+                var total = await DbContext.UserDevices.CountAsync();
+                var active = await DbContext.UserDevices.CountAsync(d => d.IsActive);
+                var fcm = await DbContext.UserDevices.CountAsync(d => !string.IsNullOrEmpty(d.FCMToken));
+                var expo = await DbContext.UserDevices.CountAsync(d => !string.IsNullOrEmpty(d.ExpoToken));
                 
                 return Ok(new
                 {

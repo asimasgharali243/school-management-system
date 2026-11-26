@@ -15,19 +15,19 @@ namespace school_management_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class NotificationsController : ControllerBase
+    public class NotificationsController : BaseApiController
     {
         private readonly INotificationService _notificationService;
-        private readonly ApplicationDbContext _context;
+       
         private readonly ILogger<NotificationsController> _logger;
 
         public NotificationsController(
             INotificationService notificationService,
-            ApplicationDbContext context,
+          
             ILogger<NotificationsController> logger)
         {
             _notificationService = notificationService;
-            _context = context;
+           
             _logger = logger;
         }
 
@@ -45,7 +45,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation("⚡⚡⚡⚡⚡⚡========== GET ALL NOTIFICATIONS REQUEST ==========");
                 
-                var query = _context.NotificationQueue.AsQueryable();
+                var query = DbContext.NotificationQueue.AsQueryable();
 
                 // Apply filters
                 if (!string.IsNullOrEmpty(status))
@@ -126,7 +126,7 @@ namespace school_management_Backend.Controllers
                     TotalPages = maxPage,
                     Debug = new
                     {
-                        TotalInDatabase = await _context.NotificationQueue.CountAsync(),
+                        TotalInDatabase = await DbContext.NotificationQueue.CountAsync(),
                         ReturnedCount = notificationDtos.Count,
                         WithDataPayload = notificationDtos.Count(d => d.HasDataPayload),
                         WithoutDataPayload = notificationDtos.Count(d => !d.HasDataPayload)
@@ -149,7 +149,7 @@ namespace school_management_Backend.Controllers
         [HttpGet("debug/payload/{id}")]
         public async Task<IActionResult> DebugPayload(int id)
         {
-            var notification = await _context.NotificationQueue
+            var notification = await DbContext.NotificationQueue
                 .FirstOrDefaultAsync(n => n.QueueID == id);
             
             if (notification == null)
@@ -173,7 +173,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var query = _context.NotificationQueue
+                var query = DbContext.NotificationQueue
                     .Where(n => n.UserID == userId)
                     .OrderByDescending(n => n.CreatedTime);
 
@@ -282,7 +282,7 @@ public async Task<IActionResult> GetNotificationById(long id)
     {
         _logger.LogInformation("Getting notification by ID: {Id}", id);
         
-        var notification = await _context.NotificationQueue
+        var notification = await DbContext.NotificationQueue
             .FirstOrDefaultAsync(n => n.QueueID == id);
         
         if (notification == null)
@@ -308,7 +308,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var count = await _context.NotificationQueue
+                var count = await DbContext.NotificationQueue
                     .Where(n => n.UserID == userId && (n.Status == "SENT" || n.Status == "PENDING"))
                     .CountAsync();
                 return Ok(new { Success = true, Count = count });
@@ -326,7 +326,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notification = await _context.NotificationQueue
+                var notification = await DbContext.NotificationQueue
                     .FirstOrDefaultAsync(n => n.QueueID == id && n.UserID == userId);
                 
                 if (notification == null)
@@ -334,7 +334,7 @@ public async Task<IActionResult> GetNotificationById(long id)
 
                 notification.Status = "READ";
                 notification.ProcessedTime = DateTime.Now;
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -345,8 +345,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"Notification marked as read by user {userId}"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = "Notification marked as read" });
             }
@@ -363,7 +363,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notifications = await _context.NotificationQueue
+                var notifications = await DbContext.NotificationQueue
                     .Where(n => n.UserID == userId && (n.Status == "SENT" || n.Status == "PENDING"))
                     .ToListAsync();
 
@@ -373,7 +373,7 @@ public async Task<IActionResult> GetNotificationById(long id)
                     notification.ProcessedTime = DateTime.Now;
                 }
 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -384,8 +384,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"All notifications marked as read by user {userId}, count: {notifications.Count}"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = $"All notifications marked as read", Count = notifications.Count });
             }
@@ -403,7 +403,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notifications = await _context.NotificationQueue
+                var notifications = await DbContext.NotificationQueue
                     .Where(n => n.Status == "PENDING")
                     .OrderBy(n => n.ScheduledTime)
                     .Take(limit)
@@ -443,7 +443,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notifications = await _context.NotificationQueue
+                var notifications = await DbContext.NotificationQueue
                     .Where(n => n.Status == "FAILED")
                     .OrderByDescending(n => n.CreatedTime)
                     .Take(limit)
@@ -486,7 +486,7 @@ public async Task<IActionResult> GetNotificationById(long id)
                 fromDate ??= DateTime.Now.AddDays(-30);
                 toDate ??= DateTime.Now;
                 
-                var stats = await _context.NotificationQueue
+                var stats = await DbContext.NotificationQueue
                     .Where(n => n.CreatedTime >= fromDate && n.CreatedTime <= toDate)
                     .GroupBy(n => n.Status)
                     .Select(g => new
@@ -528,7 +528,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notification = await _context.NotificationQueue.FindAsync(id);
+                var notification = await DbContext.NotificationQueue.FindAsync(id);
                 if (notification == null)
                     return NotFound(new { Success = false, Message = "Notification not found" });
                 
@@ -541,7 +541,7 @@ public async Task<IActionResult> GetNotificationById(long id)
                 notification.ErrorMessage = null;
                 notification.AttemptCount = 0;
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -552,8 +552,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"Notification queued for retry"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("Retrying notification {Id}", id);
                 
@@ -573,7 +573,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var query = _context.NotificationQueue.Where(n => n.Status == "FAILED");
+                var query = DbContext.NotificationQueue.Where(n => n.Status == "FAILED");
                 
                 if (ruleId.HasValue)
                     query = query.Where(n => n.RuleID == ruleId.Value);
@@ -589,7 +589,7 @@ public async Task<IActionResult> GetNotificationById(long id)
                     notification.AttemptCount = 0;
                 }
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -600,8 +600,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"All failed notifications queued for retry, count: {failedNotifications.Count}"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("Retried {Count} failed notifications", failedNotifications.Count);
                 
@@ -624,7 +624,7 @@ public async Task<IActionResult> GetNotificationById(long id)
                 var cutoffDate = DateTime.Now.AddDays(-days);
                 
                 // Find notifications to archive
-                var notificationsToArchive = await _context.NotificationQueue
+                var notificationsToArchive = await DbContext.NotificationQueue
                     .Where(n => n.CreatedTime < cutoffDate && 
                                (n.Status == "READ" || n.Status == "FAILED" || n.Status == "SENT"))
                     .ToListAsync();
@@ -644,11 +644,11 @@ public async Task<IActionResult> GetNotificationById(long id)
                         ArchivedDate = DateTime.Now
                     };
                     
-                    _context.NotificationHistory.Add(history);
-                    _context.NotificationQueue.Remove(notification);
+                    DbContext.NotificationHistory.Add(history);
+                    DbContext.NotificationQueue.Remove(notification);
                 }
                 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -659,8 +659,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"Cleaned up {notificationsToArchive.Count} notifications older than {days} days"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
                 
                 _logger.LogInformation("Cleaned up {Count} old notifications", notificationsToArchive.Count);
                 
@@ -717,7 +717,7 @@ public async Task<IActionResult> GetNotificationById(long id)
         {
             try
             {
-                var notification = await _context.NotificationQueue.FindAsync(id);
+                var notification = await DbContext.NotificationQueue.FindAsync(id);
                 if (notification == null)
                     return NotFound(new { Success = false, Message = "Notification not found" });
 
@@ -725,8 +725,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                 if (notification.Status == "PENDING" || notification.Status == "PROCESSING")
                     return BadRequest(new { Success = false, Message = "Cannot delete pending or processing notifications" });
 
-                _context.NotificationQueue.Remove(notification);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationQueue.Remove(notification);
+                await DbContext.SaveChangesAsync();
 
                 // Log the action
                 var log = new NotificationLog
@@ -737,8 +737,8 @@ public async Task<IActionResult> GetNotificationById(long id)
                     Timestamp = DateTime.Now,
                     Details = $"Notification deleted"
                 };
-                _context.NotificationLogs.Add(log);
-                await _context.SaveChangesAsync();
+                DbContext.NotificationLogs.Add(log);
+                await DbContext.SaveChangesAsync();
 
                 _logger.LogInformation("Deleted notification {Id}", id);
                 
@@ -753,7 +753,7 @@ public async Task<IActionResult> GetNotificationById(long id)
 
         private string GetCategoryFromRule(int ruleId)
         {
-            var rule = _context.NotificationRules.Find(ruleId);
+            var rule = DbContext.NotificationRules.Find(ruleId);
             return rule?.Category ?? "GENERAL";
         }
 

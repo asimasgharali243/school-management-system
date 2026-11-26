@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import Base
 const baseQuery = fetchBaseQuery({
     baseUrl: 'YOUR_API_BASE_URL',
     prepareHeaders: async (headers) => {

@@ -1,23 +1,3 @@
-// // index.js
-// import { registerRootComponent } from 'expo';
-// import { LogBox } from 'react-native';
-// import App from './App';
-
-// // Ignore all warnings temporarily
-// LogBox.ignoreAllLogs();
-
-// // Global error handler
-// if (!__DEV__) {
-//     const defaultHandler = ErrorUtils?.getGlobalHandler?.();
-//     if (defaultHandler) {
-//         ErrorUtils.setGlobalHandler((error, isFatal) => {
-//             console.error('🔥 GLOBAL ERROR:', error, isFatal);
-//             defaultHandler(error, isFatal);
-//         });
-//     }
-// }
-
-// console.log('🚀 App starting...');
 
 // registerRootComponent(App);
 import { registerRootComponent } from 'expo';

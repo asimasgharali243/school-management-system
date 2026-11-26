@@ -12,7 +12,7 @@ using System.Security.Claims;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Data;
+using System.Data;  
 using Microsoft.Data.SqlClient;
 
 namespace school_management_Backend.Controllers
@@ -20,16 +20,16 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class StudentController : ControllerBase
+    public class StudentController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+       
         private readonly ILogger<StudentController> _logger;
 
   private readonly IConfiguration _configuration;
 
-        public StudentController(ApplicationDbContext context, ILogger<StudentController> logger,IConfiguration configuration)
+        public StudentController(ILogger<StudentController> logger,IConfiguration configuration)
         {
-            _context = context;
+          
             _logger = logger;
             _configuration = configuration;
         }
@@ -42,7 +42,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation($"========== GET STUDENTS BY CLASS {classId} ==========");
                 
-                var filteredStudents = await _context.tbl_StudentRegistration
+                var filteredStudents = await DbContext.tbl_StudentRegistration
                     .Where(s => s.Class_ID == classId)
                     .Where(s => s.cur_Status == null || s.cur_Status.Trim() == "A")
                     .Select(s => new
@@ -101,7 +101,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation($"========== GET STUDENTS BY SECTION {sectionId} ==========");
                 
-                var section = await _context.tbl_AddSection
+                var section = await DbContext.tbl_AddSection
                     .FirstOrDefaultAsync(s => s.ID == sectionId);
                 
                 if (section == null)
@@ -113,7 +113,7 @@ namespace school_management_Backend.Controllers
                 _logger.LogInformation($"Section found: ID={section.ID}, Name={section.Section}, Class_ID={section.Class_ID}");
                 
                 // First, get raw data from database to check RollNo values
-                var rawStudents = await _context.tbl_StudentRegistration
+                var rawStudents = await DbContext.tbl_StudentRegistration
                     .Where(s => s.Section_ID == sectionId)
                     .Where(s => s.cur_Status == null || s.cur_Status.Trim() == "A")
                     .ToListAsync();
@@ -199,7 +199,7 @@ namespace school_management_Backend.Controllers
                 _logger.LogInformation($"========== DEBUG: RAW STUDENT DATA FOR SECTION {sectionId} ==========");
                 
                 // Get raw students without any filtering
-                var students = await _context.tbl_StudentRegistration
+                var students = await DbContext.tbl_StudentRegistration
                     .Where(s => s.Section_ID == sectionId)
                     .ToListAsync();
                 
@@ -256,7 +256,7 @@ namespace school_management_Backend.Controllers
                 _logger.LogInformation("========== TEST: CHECKING RollNo IN RESPONSE ==========");
                 
                 // Get just 5 students for testing
-                var testStudents = await _context.tbl_StudentRegistration
+                var testStudents = await DbContext.tbl_StudentRegistration
                     .Take(5)
                     .Select(s => new
                     {
@@ -305,7 +305,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation($"Getting students for family code: {familyCode}");
                 
-                var filteredStudents = await _context.tbl_StudentRegistration
+                var filteredStudents = await DbContext.tbl_StudentRegistration
                     .Where(s => s.Family_Code == familyCode)
                     .Where(s => s.cur_Status == null || s.cur_Status.Trim() == "A")
                     .Select(s => new
@@ -339,7 +339,7 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation($"Getting parents for student ID: {studentId}");
                 
-                var student = await _context.tbl_StudentRegistration
+                var student = await DbContext.tbl_StudentRegistration
                     .FirstOrDefaultAsync(s => s.Reg_Id == studentId);
 
                 if (student == null)
@@ -348,7 +348,7 @@ namespace school_management_Backend.Controllers
                 if (!student.Family_Code.HasValue)
                     return Ok(new { Success = true, Data = new List<object>() });
 
-                var parents = await _context.tbl_User
+                var parents = await DbContext.tbl_User
                     .Where(u => u.FamilyID == student.Family_Code && u.Status == true)
                     .Select(u => new
                     {
@@ -379,11 +379,11 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation("Getting sections that have students");
                 
-                var allSections = await _context.tbl_AddSection
+                var allSections = await DbContext.tbl_AddSection
                     .Where(s => s.Active == true)
                     .ToListAsync();
                 
-                var activeStudents = await _context.tbl_StudentRegistration
+                var activeStudents = await DbContext.tbl_StudentRegistration
                     .Where(s => s.cur_Status == null || s.cur_Status.Trim() == "A")
                     .ToListAsync();
                 
@@ -393,7 +393,7 @@ namespace school_management_Backend.Controllers
                         s.ID,
                         s.Section,
                         s.Class_ID,
-                        ClassName = _context.tbl_AddClass
+                        ClassName = DbContext.tbl_AddClass
                             .Where(c => c.Class_ID == s.Class_ID)
                             .Select(c => c.Class_Name)
                             .FirstOrDefault() ?? "",
@@ -421,11 +421,11 @@ namespace school_management_Backend.Controllers
             {
                 _logger.LogInformation("Getting all sections with student counts");
                 
-                var allSections = await _context.tbl_AddSection
+                var allSections = await DbContext.tbl_AddSection
                     .Where(s => s.Active == true)
                     .ToListAsync();
                 
-                var activeStudents = await _context.tbl_StudentRegistration
+                var activeStudents = await DbContext.tbl_StudentRegistration
                     .Where(s => s.cur_Status == null || s.cur_Status.Trim() == "A")
                     .ToListAsync();
                 
@@ -435,7 +435,7 @@ namespace school_management_Backend.Controllers
                         s.ID,
                         s.Section,
                         s.Class_ID,
-                        ClassName = _context.tbl_AddClass
+                        ClassName = DbContext.tbl_AddClass
                             .Where(c => c.Class_ID == s.Class_ID)
                             .Select(c => c.Class_Name)
                             .FirstOrDefault() ?? "",
@@ -461,12 +461,12 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var allSections = await _context.tbl_AddSection
+                var allSections = await DbContext.tbl_AddSection
                     .Where(s => s.Active == true)
                     .Select(s => new { s.ID, s.Section, s.Class_ID })
                     .ToListAsync();
                 
-                var allStudents = await _context.tbl_StudentRegistration.ToListAsync();
+                var allStudents = await DbContext.tbl_StudentRegistration.ToListAsync();
                 
                 var activeStudents = allStudents
                     .Where(s => s.cur_Status == null || (s.cur_Status != null && s.cur_Status.Trim() == "A"))
@@ -522,7 +522,19 @@ namespace school_management_Backend.Controllers
 
                 var result = new List<StudentFeeLedgerResponse>();
 
-                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+
+
+  var currentDatabase = DatabaseResolver.GetCurrentDatabase();
+        
+        // ✅ Get the connection string for the current database
+        var databases = _configuration.GetSection("DatabaseConfig:Databases").Get<List<DatabaseConfig>>();
+        var dbConfig = databases?.FirstOrDefault(d => d.Name == currentDatabase);
+        
+        // Use current database connection, fallback to default if not found
+        string connectionString = dbConfig?.ConnectionString ?? 
+            _configuration.GetConnectionString("DefaultConnection");
+
+                using (var connection = new SqlConnection(connectionString))
                 {
                     using (var command = new SqlCommand("sp_rptStudentFeeLedger", connection))
                     {

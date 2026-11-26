@@ -14,7 +14,9 @@
 # NODE / REACT / REACT NATIVE
 # =====================================================
 node_modules/
+school-management-Backend/Firebase/*.json
 
+Firebase/*.json
 # Builds
 dist/
 build/
@@ -76,3 +78,13 @@ secrets.json
 # =====================================================
 .DS_Store
 Thumbs.db
+
+# Archives and build artifacts
+*.rar
+*.zip
+publish/
+**/publish/
+*.lscache
+output.txt
+**/output.txt
+school-management-Backend/wwwroot/

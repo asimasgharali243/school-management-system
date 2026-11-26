@@ -12,14 +12,14 @@ namespace school_management_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
-    public class UsersController : ControllerBase
+    public class UsersController : BaseApiController
     {
-        private readonly ApplicationDbContext _context;
+   
         private readonly ILogger<UsersController> _logger;
 
         public UsersController(ApplicationDbContext context, ILogger<UsersController> logger)
         {
-            _context = context;
+       
             _logger = logger;
         }
 
@@ -29,7 +29,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var users = await _context.tbl_User
+                var users = await DbContext.tbl_User
                     .Include(u => u.Role)
                     .Select(u => new
                     {
@@ -63,7 +63,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var user = await _context.tbl_User
+                var user = await DbContext.tbl_User
                     .Include(u => u.Role)
                     .Where(u => u.ID == id)
                     .Select(u => new
@@ -104,7 +104,7 @@ namespace school_management_Backend.Controllers
                 if (string.IsNullOrEmpty(username))
                     return Ok(new { exists = false });
 
-                var exists = await _context.tbl_User
+                var exists = await DbContext.tbl_User
                     .AnyAsync(u => u.UserName != null && u.UserName.ToLower() == username.ToLower());
 
                 return Ok(new { exists });
@@ -123,7 +123,7 @@ namespace school_management_Backend.Controllers
             try
             {
                 // Check if username exists
-                var existingUser = await _context.tbl_User
+                var existingUser = await DbContext.tbl_User
                     .AnyAsync(u => u.UserName != null && u.UserName.ToLower() == request.Username.ToLower());
 
                 if (existingUser)
@@ -144,8 +144,8 @@ namespace school_management_Backend.Controllers
                     CreatedBy = GetCurrentUserId()
                 };
 
-                _context.tbl_User.Add(user);
-                await _context.SaveChangesAsync();
+                DbContext.tbl_User.Add(user);
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = "User created successfully", Data = new { user.ID } });
             }
@@ -162,7 +162,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var user = await _context.tbl_User.FindAsync(id);
+                var user = await DbContext.tbl_User.FindAsync(id);
                 if (user == null)
                     return NotFound(new { Success = false, Message = "User not found" });
 
@@ -173,7 +173,7 @@ namespace school_management_Backend.Controllers
                 user.ModifiedDT = DateTime.Now;
                 user.ModifiedBy = GetCurrentUserId();
 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = "User updated successfully" });
             }
@@ -190,7 +190,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var user = await _context.tbl_User.FindAsync(id);
+                var user = await DbContext.tbl_User.FindAsync(id);
                 if (user == null)
                     return NotFound(new { Success = false, Message = "User not found" });
 
@@ -198,7 +198,7 @@ namespace school_management_Backend.Controllers
                 user.ModifiedDT = DateTime.Now;
                 user.ModifiedBy = GetCurrentUserId();
 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = "Password reset successfully" });
             }
@@ -215,7 +215,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var user = await _context.tbl_User.FindAsync(id);
+                var user = await DbContext.tbl_User.FindAsync(id);
                 if (user == null)
                     return NotFound(new { Success = false, Message = "User not found" });
 
@@ -223,7 +223,7 @@ namespace school_management_Backend.Controllers
                 user.ModifiedDT = DateTime.Now;
                 user.ModifiedBy = GetCurrentUserId();
 
-                await _context.SaveChangesAsync();
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = $"User {(request.IsActive ? "activated" : "deactivated")} successfully" });
             }
@@ -240,7 +240,7 @@ namespace school_management_Backend.Controllers
         {
             try
             {
-                var user = await _context.tbl_User.FindAsync(id);
+                var user = await DbContext.tbl_User.FindAsync(id);
                 if (user == null)
                     return NotFound(new { Success = false, Message = "User not found" });
 
@@ -248,8 +248,8 @@ namespace school_management_Backend.Controllers
                 if (user.RoleID == 1)
                     return BadRequest(new { Success = false, Message = "Cannot delete admin users" });
 
-                _context.tbl_User.Remove(user);
-                await _context.SaveChangesAsync();
+                DbContext.tbl_User.Remove(user);
+                await DbContext.SaveChangesAsync();
 
                 return Ok(new { Success = true, Message = "User deleted successfully" });
             }

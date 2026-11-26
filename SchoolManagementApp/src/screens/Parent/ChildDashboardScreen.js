@@ -298,11 +298,19 @@
 //     };
 
 //     const handleViewHomework = () => {
-//         Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
+//         navigation.navigate('ChildHomework', {
+//             childId,
+//             childName,
+//             childData: childInfo
+//         });
 //     };
 
 //     const handleViewReports = () => {
-//         Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
+//         navigation.navigate('ChildReports', {
+//             childId,
+//             childName,
+//             childData: childInfo
+//         });
 //     };
 
 //     if (loading || gradesLoading || attendanceLoading || diaryLoading) {
@@ -1023,6 +1031,10 @@ import {
   useGetChildAttendanceStatsQuery,
   useGetChildDiaryQuery,
 } from "../../store/attendanceApi";
+import { useGetStudentPerformanceQuery } from '../../store/performanceApi';
+
+
+import { useGetStudentAlbumsQuery } from '../../store/galleryApi';
 
 const ChildDashboardScreen = ({ route, navigation }) => {
   const theme = useSelector(selectThemeData);
@@ -1042,6 +1054,10 @@ const ChildDashboardScreen = ({ route, navigation }) => {
     admissionNo: "N/A",
     diaryAccess: 0,
   });
+
+  const currentYear = new Date().getFullYear();
+const sessionYear = new Date().getMonth() >= 2 ? currentYear : currentYear - 1;
+
   const [attendance, setAttendance] = useState({
     present: 0,
     absent: 0,
@@ -1075,6 +1091,55 @@ const ChildDashboardScreen = ({ route, navigation }) => {
     childId,
     date: new Date().toISOString().split("T")[0],
   });
+
+
+  const {
+    data: albumsData,
+    isLoading: albumsLoading,
+} = useGetStudentAlbumsQuery({
+    classId: childInfo.class_ID,
+    sectionId: childInfo.section_ID,
+    page: 1,
+    limit: 1, // Fetch just 1 to get count and latest cover
+});
+
+
+const { data: performanceData } = useGetStudentPerformanceQuery({
+    regId: childId,
+    sessionYear: sessionYear,
+    classId: childInfo.class_ID || 0,
+    sectionId: childInfo.section_ID || 0,
+}, { skip: !childInfo.class_ID });
+
+
+
+const handleViewPerformance = useCallback(() => {
+    navigation.navigate('StudentPerformance', {
+        regId: childId,
+        childName: childName,
+        childData: childInfo,
+    });
+}, [navigation, childId, childName, childInfo]);
+
+
+const handleViewGallery = useCallback(() => {
+    navigation.navigate('StudentGallery', {
+        classId: childInfo.class_ID,
+        sectionId: childInfo.section_ID,
+        childName: childName,
+        childData: childInfo,
+    });
+}, [navigation, childInfo, childName]);
+
+// Calculate gallery count
+const galleryAlbumCount = albumsData?.total || 0;
+  const handleViewLectures = useCallback(() => {
+  navigation.navigate("ParentLectureList", {
+    classId: childInfo.class_ID,
+    sectionId: childInfo.section_ID,
+    childName: childName,
+  });
+}, [navigation, childInfo, childName]);
 
   // Calculate age from DOB - memoized
   const calculateAge = useCallback((dob) => {
@@ -1381,7 +1446,11 @@ const ChildDashboardScreen = ({ route, navigation }) => {
   }, [navigation, childId, childName, childInfo]);
 
   const handleViewHomework = useCallback(() => {
-    Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
+    navigation.navigate("ChildHomework", {
+      childId,
+      childName,
+      childData: childInfo,
+    });
   }, [navigation, childId, childName, childInfo]);
 
   const handleViewFeeLedger = () => {
@@ -1393,7 +1462,11 @@ const ChildDashboardScreen = ({ route, navigation }) => {
   };
 
   const handleViewReports = useCallback(() => {
-    Alert.alert('Not available', 'This view is not implemented in this app version. Use the available diary, attendance and grades screens or contact your school.');
+    navigation.navigate("ChildReports", {
+      childId,
+      childName,
+      childData: childInfo,
+    });
   }, [navigation, childId, childName, childInfo]);
 
   // Loading state
@@ -1657,6 +1730,32 @@ const ChildDashboardScreen = ({ route, navigation }) => {
             </Text>
           </TouchableOpacity>
 
+          {/* Gallery/Albums Button */}
+<TouchableOpacity
+  style={[styles.actionButton, { backgroundColor: theme.background }]}
+  onPress={handleViewGallery}
+  activeOpacity={0.7}
+>
+  <View
+    style={[
+      styles.actionIconContainer,
+      { backgroundColor: "#8B5CF620" },
+    ]}
+  >
+    <Icon name="image-multiple" size={22} color="#8B5CF6" />
+  </View>
+  <Text style={[styles.actionText, { color: theme.text }]}>
+    Gallery
+  </Text>
+  {galleryAlbumCount > 0 && (
+    <View style={[styles.actionBadge, { backgroundColor: theme.primary }]}>
+      <Text style={styles.actionBadgeText}>
+        {galleryAlbumCount > 99 ? '99+' : galleryAlbumCount}
+      </Text>
+    </View>
+  )}
+</TouchableOpacity>
+
 <TouchableOpacity
     style={[styles.actionButton, { backgroundColor: theme.background }]}
     onPress={() => navigation.navigate('ComplaintList', {
@@ -1672,6 +1771,43 @@ const ChildDashboardScreen = ({ route, navigation }) => {
     <Text style={[styles.actionText, { color: theme.text }]}>
         Complaints
     </Text>
+</TouchableOpacity>
+
+{/* Video Lectures Button */}
+<TouchableOpacity
+  style={[styles.actionButton, { backgroundColor: theme.background }]}
+  onPress={handleViewLectures}
+  activeOpacity={0.7}
+>
+  <View
+    style={[
+      styles.actionIconContainer,
+      { backgroundColor: "#FF000020" },
+    ]}
+  >
+    <Icon name="video" size={22} color="#FF0000" />
+  </View>
+  <Text style={[styles.actionText, { color: theme.text }]}>
+    Lectures
+  </Text>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={[styles.actionButton, { backgroundColor: theme.background }]}
+  onPress={handleViewPerformance}
+  activeOpacity={0.7}
+>
+  <View style={[styles.actionIconContainer, { backgroundColor: '#10B98120' }]}>
+    <Icon name="chart-bar" size={22} color="#10B981" />
+  </View>
+  <Text style={[styles.actionText, { color: theme.text }]}>
+    Performance
+  </Text>
+  {performanceData?.overallPercentage > 0 && (
+    <View style={[styles.perfBadge, { backgroundColor: '#10B981' }]}>
+      <Text style={styles.perfBadgeText}>{performanceData.overallPercentage}%</Text>
+    </View>
+  )}
 </TouchableOpacity>
 
           <TouchableOpacity
@@ -2308,6 +2444,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  actionBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#FFF',
+},
+actionBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+},
+perfBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    minWidth: 30,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+},
+perfBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+},
 });
 
 export default ChildDashboardScreen;
